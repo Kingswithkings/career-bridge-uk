@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+
+# Secrets
+.env
+.streamlit/secrets.toml
+token.json
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Build
+dist/
+build/
+
+# Database
+*.db
+
+# IDE
+.vscode/
+.idea/
