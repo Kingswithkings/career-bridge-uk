@@ -1,4 +1,4 @@
-from app.services.ai_service import ask_ai
+from .ai_service import ask_ai
 
 
 def analyze_cv(
@@ -52,6 +52,54 @@ def analyze_cv(
     9. Suggested Key Skills Section
 
     10. Action Plan Before Applying
+    """
+
+    return ask_ai(system_prompt, user_prompt)
+
+
+def generate_uk_cv(
+    cv_text: str,
+    target_role: str,
+    location: str | None = None,
+    experience_level: str | None = "Entry-level",
+) -> str:
+    system_prompt = """
+    You are CareerBridge UK, a professional UK CV writer.
+    You create ATS-friendly UK-standard CVs for job seekers.
+
+    You must not invent fake qualifications, jobs, or experience.
+    Only reframe and improve the candidate's existing experience.
+    If information is missing, include a section called "Information to Add".
+    """
+
+    user_prompt = f"""
+    Rewrite this CV into a professional UK-standard CV.
+
+    Target role: {target_role}
+    Preferred location: {location}
+    Experience level: {experience_level}
+
+    Original CV:
+    {cv_text}
+
+    Output the CV in this structure:
+
+    FULL NAME
+    Location | Phone | Email | LinkedIn
+
+    PROFESSIONAL PROFILE
+
+    KEY SKILLS
+
+    WORK EXPERIENCE
+
+    EDUCATION
+
+    CERTIFICATIONS AND TRAINING
+
+    ADDITIONAL INFORMATION
+
+    INFORMATION TO ADD
     """
 
     return ask_ai(system_prompt, user_prompt)

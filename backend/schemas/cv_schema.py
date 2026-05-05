@@ -11,3 +11,14 @@ class CVAnalysisRequest(BaseModel):
 
 class CVAnalysisResponse(BaseModel):
     analysis: str
+
+
+class CVGenerateRequest(BaseModel):
+    cv_text: str
+    target_role: str
+    location: str | None = None
+    experience_level: str | None = "Entry-level"
+
+
+class CVGenerateResponse(BaseModel):
+    generated_cv: str

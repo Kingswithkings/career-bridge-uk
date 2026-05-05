@@ -1,7 +1,12 @@
 from fastapi import APIRouter, HTTPException
 
-from app.services.cv_service import analyze_cv
-from schemas.cv_schema import CVAnalysisRequest, CVAnalysisResponse
+from backend.schemas.cv_schema import (
+    CVAnalysisRequest,
+    CVAnalysisResponse,
+    CVGenerateRequest,
+    CVGenerateResponse,
+)
+from backend.services.cv_service import analyze_cv, generate_uk_cv
 
 router = APIRouter(prefix="/api/cv", tags=["CV"])
 
@@ -16,8 +21,20 @@ def analyze_candidate_cv(request: CVAnalysisRequest):
             experience_level=request.experience_level,
             visa_status=request.visa_status,
         )
-
         return CVAnalysisResponse(analysis=result)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
 
+
+@router.post("/generate", response_model=CVGenerateResponse)
+def generate_candidate_cv(request: CVGenerateRequest):
+    try:
+        result = generate_uk_cv(
+            cv_text=request.cv_text,
+            target_role=request.target_role,
+            location=request.location,
+            experience_level=request.experience_level,
+        )
+        return CVGenerateResponse(generated_cv=result)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

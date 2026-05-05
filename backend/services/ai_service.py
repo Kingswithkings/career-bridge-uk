@@ -1,6 +1,6 @@
 from openai import OpenAI
 
-from app.config import OPENAI_API_KEY
+from backend.app.config import OPENAI_API_KEY
 
 
 def ask_ai(system_prompt: str, user_prompt: str) -> str:

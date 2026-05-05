@@ -59,7 +59,6 @@ def prepare_interview(
 
     return ask_ai(system_prompt, user_prompt)
 
-
 def run_mock_interview(
     cv_text: str,
     target_role: str,
@@ -88,7 +87,7 @@ def run_mock_interview(
     """
 
     conversation_text = "\n".join(
-        f"{message.role}: {message.content}" for message in messages
+        [f"{message.role}: {message.content}" for message in messages]
     )
 
     user_prompt = f"""
