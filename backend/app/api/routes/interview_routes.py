@@ -3,14 +3,24 @@ from typing import Any
 from fastapi import APIRouter, Body, HTTPException
 from pydantic import ValidationError
 
-from ....schemas.interview_schema import (
-    InterviewMessage,
-    InterviewPreparationRequest,
-    InterviewPreparationResponse,
-    MockInterviewRequest,
-    MockInterviewResponse,
-)
 from ...services.interview_service import prepare_interview, run_mock_interview
+
+try:
+    from backend.schemas.interview_schema import (
+        InterviewMessage,
+        InterviewPreparationRequest,
+        InterviewPreparationResponse,
+        MockInterviewRequest,
+        MockInterviewResponse,
+    )
+except ModuleNotFoundError:
+    from schemas.interview_schema import (
+        InterviewMessage,
+        InterviewPreparationRequest,
+        InterviewPreparationResponse,
+        MockInterviewRequest,
+        MockInterviewResponse,
+    )
 
 router = APIRouter(prefix="/api/interview", tags=["Interview"])
 

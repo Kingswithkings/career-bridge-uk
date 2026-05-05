@@ -1,12 +1,21 @@
 from fastapi import APIRouter, HTTPException
 
-from ....schemas.cv_schema import (
-    CVAnalysisRequest,
-    CVAnalysisResponse,
-    CVGenerateRequest,
-    CVGenerateResponse,
-)
 from ...services.cv_service import analyze_cv, generate_uk_cv
+
+try:
+    from backend.schemas.cv_schema import (
+        CVAnalysisRequest,
+        CVAnalysisResponse,
+        CVGenerateRequest,
+        CVGenerateResponse,
+    )
+except ModuleNotFoundError:
+    from schemas.cv_schema import (
+        CVAnalysisRequest,
+        CVAnalysisResponse,
+        CVGenerateRequest,
+        CVGenerateResponse,
+    )
 
 router = APIRouter(prefix="/api/cv", tags=["CV"])
 

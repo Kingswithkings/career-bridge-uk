@@ -1,7 +1,11 @@
 from fastapi import APIRouter, HTTPException
 
-from ....schemas.job_schema import JobMatchRequest, JobMatchResponse
 from ...services.job_match_service import match_job
+
+try:
+    from backend.schemas.job_schema import JobMatchRequest, JobMatchResponse
+except ModuleNotFoundError:
+    from schemas.job_schema import JobMatchRequest, JobMatchResponse
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 
