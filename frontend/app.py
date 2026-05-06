@@ -16,10 +16,18 @@ from services.api_client import (
     analyze_cv,
     generate_cv,
     get_results,
+    login_user,
     match_job,
     mock_interview,
     prepare_interview,
+    register_user,
     save_result,
+)
+
+st.set_page_config(
+    page_title="CareerBridge UK",
+    page_icon="🇬🇧",
+    layout="wide",
 )
 
 
@@ -116,11 +124,68 @@ def create_docx_download(text, title="CareerBridge UK Result"):
 
     return buffer
 
-st.set_page_config(
-    page_title="CareerBridge UK",
-    page_icon="🇬🇧",
-    layout="wide",
-)
+
+def auth_screen():
+    st.title("🇬🇧 CareerBridge UK")
+    st.subheader("Login or create your account")
+
+    auth_tab1, auth_tab2 = st.tabs(["Login", "Register"])
+
+    with auth_tab1:
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Password", type="password", key="login_password")
+
+        if st.button("Login"):
+            response = login_user(
+                {
+                    "email": email,
+                    "password": password,
+                }
+            )
+
+            if "access_token" in response:
+                st.session_state["logged_in"] = True
+                st.session_state["token"] = response["access_token"]
+                st.session_state["email"] = response["email"]
+                st.success("Login successful")
+                st.rerun()
+            else:
+                st.error(response.get("detail", "Login failed"))
+
+    with auth_tab2:
+        full_name = st.text_input("Full Name")
+        reg_email = st.text_input("Email", key="register_email")
+        reg_password = st.text_input(
+            "Password",
+            type="password",
+            key="register_password",
+        )
+
+        if st.button("Create Account"):
+            response = register_user(
+                {
+                    "full_name": full_name,
+                    "email": reg_email,
+                    "password": reg_password,
+                }
+            )
+
+            if "access_token" in response:
+                st.session_state["logged_in"] = True
+                st.session_state["token"] = response["access_token"]
+                st.session_state["email"] = response["email"]
+                st.success("Account created")
+                st.rerun()
+            else:
+                st.error(response.get("detail", "Registration failed"))
+
+
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+
+if not st.session_state["logged_in"]:
+    auth_screen()
+    st.stop()
 
 st.markdown(
     """
@@ -220,6 +285,12 @@ with st.sidebar:
         "Experience level",
         ["Entry-level", "Some experience", "Experienced", "Career change"],
     )
+    st.divider()
+    if st.button("Logout", use_container_width=True):
+        st.session_state["logged_in"] = False
+        st.session_state.pop("token", None)
+        st.session_state.pop("email", None)
+        st.rerun()
 
 cv_text = ""
 

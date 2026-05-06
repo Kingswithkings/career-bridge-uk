@@ -1,9 +1,10 @@
-from typing import Any
-
 from fastapi import APIRouter, Body, HTTPException
+from fastapi import Depends
 from pydantic import ValidationError
 
+from ...api.dependencies import get_current_user
 from ...services.interview_service import prepare_interview, run_mock_interview
+
 
 try:
     from backend.schemas.interview_schema import (
@@ -26,7 +27,11 @@ router = APIRouter(prefix="/api/interview", tags=["Interview"])
 
 
 @router.post("/prepare", response_model=InterviewPreparationResponse)
-def prepare_candidate_interview(request: InterviewPreparationRequest):
+def prepare_candidate_interview(
+    request: InterviewPreparationRequest,
+    _current_user=Depends(get_current_user),
+):
+
     try:
         result = prepare_interview(
             cv_text=request.cv_text,
@@ -42,7 +47,11 @@ def prepare_candidate_interview(request: InterviewPreparationRequest):
 
 
 @router.post("/mock", response_model=MockInterviewResponse)
-def mock_interview(payload: Any = Body(default_factory=dict)):
+def mock_interview(
+    payload: dict = Body(default_factory=dict),
+    _current_user=Depends(get_current_user),
+):
+
     try:
         if payload is None:
             payload = {}

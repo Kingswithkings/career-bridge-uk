@@ -1,6 +1,13 @@
+from importlib import import_module
+
 from openai import OpenAI
 
-from backend.app.config import OPENAI_API_KEY
+try:
+    _config = import_module("backend.app.config")
+except ModuleNotFoundError:
+    _config = import_module("app.config")
+
+OPENAI_API_KEY = _config.OPENAI_API_KEY
 
 
 def ask_ai(system_prompt: str, user_prompt: str) -> str:

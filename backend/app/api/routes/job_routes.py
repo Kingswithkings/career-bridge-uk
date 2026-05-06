@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from ...api.dependencies import get_current_user
 from ...services.job_match_service import match_job
+
 
 try:
     from backend.schemas.job_schema import JobMatchRequest, JobMatchResponse
@@ -11,7 +13,11 @@ router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
 
 
 @router.post("/match", response_model=JobMatchResponse)
-def match_candidate_to_job(request: JobMatchRequest):
+def match_candidate_to_job(
+    request: JobMatchRequest,
+    _current_user=Depends(get_current_user),
+):
+
     try:
         result = match_job(
             cv_text=request.cv_text,

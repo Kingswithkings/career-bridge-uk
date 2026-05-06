@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from ...api.dependencies import get_current_user
 from ...services.cv_service import analyze_cv, generate_uk_cv
 
 try:
@@ -21,7 +22,11 @@ router = APIRouter(prefix="/api/cv", tags=["CV"])
 
 
 @router.post("/analyze", response_model=CVAnalysisResponse)
-def analyze_candidate_cv(request: CVAnalysisRequest):
+def analyze_candidate_cv(
+    request: CVAnalysisRequest,
+    _current_user=Depends(get_current_user),
+):
+
     try:
         result = analyze_cv(
             cv_text=request.cv_text,
@@ -36,7 +41,11 @@ def analyze_candidate_cv(request: CVAnalysisRequest):
 
 
 @router.post("/generate", response_model=CVGenerateResponse)
-def generate_candidate_cv(request: CVGenerateRequest):
+def generate_candidate_cv(
+    request: CVGenerateRequest,
+    _current_user=Depends(get_current_user),
+):
+
     try:
         result = generate_uk_cv(
             cv_text=request.cv_text,

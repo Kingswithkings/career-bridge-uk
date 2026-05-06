@@ -1,7 +1,17 @@
 import requests
+import streamlit as st
 
 BASE_URL = "http://127.0.0.1:8000"
 TIMEOUT_SECONDS = 60
+
+
+def get_headers():
+    token = st.session_state.get("token")
+
+    if token:
+        return {"Authorization": f"Bearer {token}"}
+
+    return {}
 
 
 def post_json(path, data):
@@ -9,6 +19,7 @@ def post_json(path, data):
         response = requests.post(
             f"{BASE_URL}{path}",
             json=data,
+            headers=get_headers(),
             timeout=TIMEOUT_SECONDS,
         )
         response.raise_for_status()
@@ -32,6 +43,7 @@ def get_json(path):
     try:
         response = requests.get(
             f"{BASE_URL}{path}",
+            headers=get_headers(),
             timeout=TIMEOUT_SECONDS,
         )
         response.raise_for_status()
@@ -77,3 +89,17 @@ def save_result(data):
 
 def get_results():
     return get_json("/api/results/")
+
+
+def register_user(data):
+    try:
+        return post_json("/api/auth/register", data)
+    except RuntimeError as exc:
+        return {"detail": str(exc)}
+
+
+def login_user(data):
+    try:
+        return post_json("/api/auth/login", data)
+    except RuntimeError as exc:
+        return {"detail": str(exc)}
