@@ -1,12 +1,19 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.schemas.cv_schema import (
     CVAnalysisRequest,
     CVAnalysisResponse,
     CVGenerateRequest,
     CVGenerateResponse,
+    ImprovedCVRequest,
+    ImprovedCVResponse,
 )
-from backend.services.cv_service import analyze_cv, generate_uk_cv
+from backend.api.dependencies import get_current_user
+from backend.services.cv_service import (
+    analyze_cv,
+    generate_improved_cv_from_analysis,
+    generate_uk_cv,
+)
 
 router = APIRouter(prefix="/api/cv", tags=["CV"])
 
@@ -38,3 +45,23 @@ def generate_candidate_cv(request: CVGenerateRequest):
         return CVGenerateResponse(generated_cv=result)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/generate-from-analysis", response_model=ImprovedCVResponse)
+def generate_cv_from_analysis(
+    request: ImprovedCVRequest,
+    _current_user=Depends(get_current_user),
+):
+    try:
+        result = generate_improved_cv_from_analysis(
+            cv_text=request.cv_text,
+            cv_analysis=request.cv_analysis,
+            target_role=request.target_role,
+            location=request.location,
+            experience_level=request.experience_level,
+        )
+
+        return ImprovedCVResponse(improved_cv=result)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

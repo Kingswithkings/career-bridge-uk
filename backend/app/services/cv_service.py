@@ -103,3 +103,58 @@ def generate_uk_cv(
     """
 
     return ask_ai(system_prompt, user_prompt)
+
+
+def generate_improved_cv_from_analysis(
+    cv_text: str,
+    cv_analysis: str,
+    target_role: str,
+    location: str | None = None,
+    experience_level: str | None = "Entry-level",
+) -> str:
+    system_prompt = """
+    You are CareerBridge UK, a professional UK CV writer.
+    Use the CV analysis to generate an improved UK-standard CV.
+
+    Do not invent fake experience, employers, dates, qualifications, or certifications.
+    Use placeholders only where important information is missing.
+    """
+
+    user_prompt = f"""
+    Generate an improved UK-standard CV using the analysis below.
+
+    Target role: {target_role}
+    Preferred location: {location}
+    Experience level: {experience_level}
+
+    Original CV:
+    {cv_text}
+
+    CV Analysis:
+    {cv_analysis}
+
+    Output a complete UK CV in this structure:
+
+    FULL NAME
+    Location | Phone | Email | LinkedIn
+
+    PROFESSIONAL PROFILE
+
+    KEY SKILLS
+
+    TECHNICAL SKILLS
+
+    PROJECTS
+
+    WORK EXPERIENCE
+
+    EDUCATION
+
+    CERTIFICATIONS AND TRAINING
+
+    ADDITIONAL INFORMATION
+
+    INFORMATION TO ADD
+    """
+
+    return ask_ai(system_prompt, user_prompt)

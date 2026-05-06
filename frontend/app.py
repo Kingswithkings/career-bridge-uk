@@ -8,6 +8,15 @@ except ModuleNotFoundError:
     Document = None
 
 try:
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+except ModuleNotFoundError:
+    getSampleStyleSheet = None
+    Paragraph = None
+    SimpleDocTemplate = None
+    Spacer = None
+
+try:
     from pypdf import PdfReader
 except ModuleNotFoundError:
     PdfReader = None
@@ -15,6 +24,7 @@ except ModuleNotFoundError:
 from services.api_client import (
     analyze_cv,
     generate_cv,
+    generate_cv_from_analysis,
     get_results,
     login_user,
     match_job,
@@ -22,7 +32,6 @@ from services.api_client import (
     prepare_interview,
     register_user,
     save_result,
-    get_results,
     search_jobs,
 )
 
@@ -122,6 +131,31 @@ def create_docx_download(text, title="CareerBridge UK Result"):
 
     buffer = BytesIO()
     doc.save(buffer)
+    buffer.seek(0)
+
+    return buffer
+
+
+def create_pdf_download(text, title="CareerBridge UK CV"):
+    if SimpleDocTemplate is None:
+        return None
+
+    buffer = BytesIO()
+
+    doc = SimpleDocTemplate(buffer)
+    styles = getSampleStyleSheet()
+    story = []
+
+    story.append(Paragraph(title, styles["Title"]))
+    story.append(Spacer(1, 12))
+
+    for line in text.split("\n"):
+        clean_line = line.strip()
+        if clean_line:
+            story.append(Paragraph(clean_line, styles["BodyText"]))
+            story.append(Spacer(1, 6))
+
+    doc.build(story)
     buffer.seek(0)
 
     return buffer
@@ -336,6 +370,21 @@ with tab1:
         if "cv_analysis_result" in st.session_state:
             st.subheader("CV Analysis")
             st.write(st.session_state.cv_analysis_result)
+            if st.button("Generate Improved CV From This Analysis", use_container_width=True):
+                if not cv_text.strip():
+                    st.warning("Upload or paste your CV first.")
+                else:
+                    result = call_backend(
+                        generate_cv_from_analysis,
+                        {
+                            **base_payload,
+                            "cv_analysis": st.session_state.cv_analysis_result,
+                        },
+                        "improved_cv",
+                    )
+                    if result:
+                        st.session_state.improved_cv_result = result
+
             if st.button("Save CV Analysis", use_container_width=True):
                 save_current_result(
                     "CV Analysis",
@@ -385,6 +434,52 @@ with tab1:
                     location,
                 )
 
+        if "improved_cv_result" in st.session_state:
+            st.subheader("Improved CV Based on Analysis")
+            st.write(st.session_state.improved_cv_result)
+            improved_cv_pdf = create_pdf_download(
+                st.session_state.improved_cv_result,
+                "Improved UK CV",
+            )
+            improved_cv_docx = create_docx_download(
+                st.session_state.improved_cv_result,
+                "Improved UK CV",
+            )
+            if improved_cv_pdf:
+                st.download_button(
+                    label="Download Improved CV as PDF",
+                    data=improved_cv_pdf,
+                    file_name="careerbridge_improved_cv.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
+            else:
+                st.info("PDF download support requires reportlab.")
+
+            if improved_cv_docx:
+                st.download_button(
+                    label="Download Improved CV as DOCX",
+                    data=improved_cv_docx,
+                    file_name="careerbridge_improved_cv.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                )
+            st.download_button(
+                label="Download Improved CV as TXT",
+                data=st.session_state.improved_cv_result,
+                file_name="careerbridge_improved_cv.txt",
+                mime="text/plain",
+                use_container_width=True,
+            )
+            if st.button("Save Improved CV", use_container_width=True):
+                save_current_result(
+                    "Improved CV",
+                    cv_text,
+                    st.session_state.improved_cv_result,
+                    target_role,
+                    location,
+                )
+
 with tab2:
     st.header("Live UK Job Search")
 
@@ -415,18 +510,139 @@ with tab2:
         if "detail" in response:
             st.error(response["detail"])
         else:
+            st.session_state.live_jobs = response["results"]
+            st.session_state.live_jobs_count = response["count"]
             st.success(f"Found approximately {response['count']} jobs")
 
-            for job in response["results"]:
-                with st.expander(f"{job.get('title')} — {job.get('company')}"):
-                    st.write(f"**Location:** {job.get('location')}")
-                    st.write(
-                        f"**Salary:** {job.get('salary_min')} - {job.get('salary_max')}"
-                    )
-                    st.write(job.get("description"))
+    for index, job in enumerate(st.session_state.get("live_jobs", [])):
+        job_key = job.get("redirect_url") or f"{job.get('title')}_{index}"
 
-                    if job.get("redirect_url"):
-                        st.link_button("View / Apply", job.get("redirect_url"))
+        with st.expander(f"{job.get('title')} — {job.get('company')}"):
+            st.write(f"**Location:** {job.get('location')}")
+            st.write(
+                f"**Salary:** {job.get('salary_min')} - {job.get('salary_max')}"
+            )
+            st.write(job.get("description"))
+
+            col_a, col_b, col_c = st.columns(3)
+
+            with col_a:
+                if st.button(
+                    "Check CV Match",
+                    key=f"match_{job_key}",
+                    use_container_width=True,
+                ):
+                    if not cv_text.strip():
+                        st.warning("Upload or paste your CV first.")
+                    else:
+                        result = call_backend(
+                            match_job,
+                            {
+                                "cv_text": cv_text,
+                                "target_role": job.get("title"),
+                                "job_description": job.get("description"),
+                                "location": job.get("location"),
+                                "experience_level": experience_level,
+                            },
+                            "match_result",
+                        )
+                        if result:
+                            st.session_state[f"live_job_match_{job_key}"] = result
+
+            with col_b:
+                if st.button(
+                    "Generate Tailored CV",
+                    key=f"tailored_cv_{job_key}",
+                    use_container_width=True,
+                ):
+                    if not cv_text.strip():
+                        st.warning("Upload or paste your CV first.")
+                    else:
+                        result = call_backend(
+                            generate_cv_from_analysis,
+                            {
+                                "cv_text": cv_text,
+                                "cv_analysis": f"""
+                                Tailor this CV specifically for this job.
+
+                                Job title: {job.get("title")}
+                                Company: {job.get("company")}
+                                Location: {job.get("location")}
+                                Job description: {job.get("description")}
+                                """,
+                                "target_role": job.get("title"),
+                                "location": job.get("location"),
+                                "experience_level": experience_level,
+                            },
+                            "improved_cv",
+                        )
+                        if result:
+                            st.session_state[f"live_job_tailored_cv_{job_key}"] = result
+
+            with col_c:
+                if st.button(
+                    "Prepare Interview",
+                    key=f"interview_{job_key}",
+                    use_container_width=True,
+                ):
+                    if not cv_text.strip():
+                        st.warning("Upload or paste your CV first.")
+                    else:
+                        result = call_backend(
+                            prepare_interview,
+                            {
+                                "cv_text": cv_text,
+                                "target_role": job.get("title"),
+                                "job_description": job.get("description"),
+                                "location": job.get("location"),
+                                "experience_level": experience_level,
+                                "interview_style": "Formal",
+                            },
+                            "preparation",
+                        )
+                        if result:
+                            st.session_state[f"live_job_interview_{job_key}"] = result
+
+            if f"live_job_match_{job_key}" in st.session_state:
+                st.subheader("AI Job Match Result")
+                st.write(st.session_state[f"live_job_match_{job_key}"])
+
+            if f"live_job_tailored_cv_{job_key}" in st.session_state:
+                tailored_cv = st.session_state[f"live_job_tailored_cv_{job_key}"]
+                st.subheader("Tailored CV for This Job")
+                st.write(tailored_cv)
+
+                tailored_pdf = create_pdf_download(tailored_cv, "Tailored UK CV")
+                tailored_docx = create_docx_download(tailored_cv, "Tailored UK CV")
+
+                if tailored_pdf:
+                    st.download_button(
+                        "Download Tailored CV as PDF",
+                        data=tailored_pdf,
+                        file_name="careerbridge_tailored_cv.pdf",
+                        mime="application/pdf",
+                        key=f"download_pdf_{job_key}",
+                        use_container_width=True,
+                    )
+                else:
+                    st.info("PDF download support requires reportlab.")
+
+                if tailored_docx:
+                    st.download_button(
+                        "Download Tailored CV as DOCX",
+                        data=tailored_docx,
+                        file_name="careerbridge_tailored_cv.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        key=f"download_docx_{job_key}",
+                        use_container_width=True,
+                    )
+
+            if f"live_job_interview_{job_key}" in st.session_state:
+                st.subheader("Interview Preparation for This Job")
+                st.write(st.session_state[f"live_job_interview_{job_key}"])
+
+            if job.get("redirect_url"):
+                st.link_button("View / Apply", job.get("redirect_url"))
 
 with tab3:
     job_description = st.text_area("Paste the job description", height=180)

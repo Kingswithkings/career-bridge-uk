@@ -22,3 +22,15 @@ class CVGenerateRequest(BaseModel):
 
 class CVGenerateResponse(BaseModel):
     generated_cv: str
+
+
+class ImprovedCVRequest(BaseModel):
+    cv_text: str
+    cv_analysis: str
+    target_role: str
+    location: str | None = None
+    experience_level: str | None = "Entry-level"
+
+
+class ImprovedCVResponse(BaseModel):
+    improved_cv: str

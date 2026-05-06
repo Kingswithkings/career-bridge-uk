@@ -1,8 +1,15 @@
 import requests
 import streamlit as st
 
-BASE_URL = "http://127.0.0.1:8000"
+DEFAULT_BACKEND_URL = "https://career-bridge-uk.onrender.com"
 TIMEOUT_SECONDS = 60
+
+
+def get_base_url():
+    try:
+        return st.secrets.get("BACKEND_URL", DEFAULT_BACKEND_URL).rstrip("/")
+    except (FileNotFoundError, KeyError):
+        return DEFAULT_BACKEND_URL
 
 
 def get_headers():
@@ -17,7 +24,7 @@ def get_headers():
 def post_json(path, data):
     try:
         response = requests.post(
-            f"{BASE_URL}{path}",
+            f"{get_base_url()}{path}",
             json=data,
             headers=get_headers(),
             timeout=TIMEOUT_SECONDS,
@@ -42,7 +49,7 @@ def post_json(path, data):
 def get_json(path):
     try:
         response = requests.get(
-            f"{BASE_URL}{path}",
+            f"{get_base_url()}{path}",
             headers=get_headers(),
             timeout=TIMEOUT_SECONDS,
         )
@@ -71,6 +78,10 @@ def generate_cv(data):
     return post_json("/api/cv/generate", data)
 
 
+def generate_cv_from_analysis(data):
+    return post_json("/api/cv/generate-from-analysis", data)
+
+
 def prepare_interview(data):
     return post_json("/api/interview/prepare", data)
 
@@ -89,6 +100,10 @@ def save_result(data):
 
 def get_results():
     return get_json("/api/results/")
+
+
+def health_check():
+    return get_json("/health")
 
 
 def register_user(data):
