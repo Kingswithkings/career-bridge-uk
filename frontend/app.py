@@ -100,6 +100,18 @@ def call_backend(action, payload, result_key):
     return response[result_key]
 
 
+def format_auth_error(message):
+    if "Invalid email or password" in message:
+        return (
+            "Invalid email or password. If this is your first time using the deployed app, "
+            "create an account in the Register tab first."
+        )
+    if "Email already registered" in message:
+        return "That email is already registered. Use the Login tab with the password you created."
+
+    return message
+
+
 def save_current_result(feature_type, input_text, result_text, target_role, location):
     try:
         response = save_result(
@@ -190,7 +202,7 @@ def auth_screen():
                 st.success("Login successful")
                 st.rerun()
             else:
-                st.error(response.get("detail", "Login failed"))
+                st.error(format_auth_error(response.get("detail", "Login failed")))
 
     with auth_tab2:
         full_name = st.text_input("Full Name")
@@ -221,7 +233,7 @@ def auth_screen():
                 st.success("Account created")
                 st.rerun()
             else:
-                st.error(response.get("detail", "Registration failed"))
+                st.error(format_auth_error(response.get("detail", "Registration failed")))
 
 
 if "logged_in" not in st.session_state:
