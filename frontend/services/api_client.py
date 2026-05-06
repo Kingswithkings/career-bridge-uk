@@ -1,3 +1,5 @@
+import os
+
 import requests
 import streamlit as st
 
@@ -6,6 +8,10 @@ TIMEOUT_SECONDS = 60
 
 
 def get_base_url():
+    backend_url = os.getenv("BACKEND_URL")
+    if backend_url:
+        return backend_url.rstrip("/")
+
     try:
         return st.secrets.get("BACKEND_URL", DEFAULT_BACKEND_URL).rstrip("/")
     except (FileNotFoundError, KeyError):
