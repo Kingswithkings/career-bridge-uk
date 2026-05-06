@@ -17,10 +17,10 @@ router = APIRouter(prefix="/api/results", tags=["Results"])
 def save_result(
     request: SaveResultRequest,
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
-
     saved = SavedResult(
+        user_id=current_user.id,
         feature_type=request.feature_type,
         target_role=request.target_role,
         location=request.location,
@@ -41,7 +41,11 @@ def save_result(
 @router.get("/", response_model=list[SavedResultItem])
 def get_results(
     db: Session = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
-
-    return db.query(SavedResult).order_by(SavedResult.created_at.desc()).all()
+    return (
+        db.query(SavedResult)
+        .filter(SavedResult.user_id == current_user.id)
+        .order_by(SavedResult.created_at.desc())
+        .all()
+    )
