@@ -3,12 +3,21 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
+from .config import DATABASE_URL as CONFIG_DATABASE_URL
+
 DATABASE_PATH = Path(__file__).resolve().parents[1] / "careerbridge.db"
-DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+DATABASE_URL = CONFIG_DATABASE_URL or f"sqlite:///{DATABASE_PATH}"
+
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+connect_args = {}
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(

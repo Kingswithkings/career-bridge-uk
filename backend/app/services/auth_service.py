@@ -1,8 +1,13 @@
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..models.user_model import User
 from ..utils.security import create_access_token, hash_password, verify_password
+
+
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
 
 
 def register_user(
@@ -11,13 +16,14 @@ def register_user(
     password: str,
     full_name: str | None = None,
 ):
-    existing_user = db.query(User).filter(User.email == email).first()
+    email = normalize_email(email)
+    existing_user = db.query(User).filter(func.lower(User.email) == email).first()
 
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user = User(
-        full_name=full_name,
+        full_name=full_name.strip() if full_name else None,
         email=email,
         hashed_password=hash_password(password),
     )
@@ -36,7 +42,8 @@ def register_user(
 
 
 def login_user(db: Session, email: str, password: str):
-    user = db.query(User).filter(User.email == email).first()
+    email = normalize_email(email)
+    user = db.query(User).filter(func.lower(User.email) == email).first()
 
     if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")

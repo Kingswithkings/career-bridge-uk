@@ -174,8 +174,8 @@ def auth_screen():
         if st.button("Login"):
             response = login_user(
                 {
-                    "email": email,
-                    "password": password,
+                    "email": email.strip(),
+                    "password": password.strip(),
                 }
             )
 
@@ -200,9 +200,9 @@ def auth_screen():
         if st.button("Create Account"):
             response = register_user(
                 {
-                    "full_name": full_name,
-                    "email": reg_email,
-                    "password": reg_password,
+                    "full_name": full_name.strip(),
+                    "email": reg_email.strip(),
+                    "password": reg_password.strip(),
                 }
             )
 
