@@ -110,14 +110,29 @@ def register_user(data):
     try:
         return post_json("/api/auth/register", data)
     except RuntimeError as exc:
-        return {"detail": str(exc)}
+        message = str(exc)
+        if "Backend returned 400" in message and "Email already registered" in message:
+            return {
+                "detail": "That email is already registered. Use the Login tab with the password you created.",
+                "status_code": 400,
+            }
+        return {"detail": message}
 
 
 def login_user(data):
     try:
         return post_json("/api/auth/login", data)
     except RuntimeError as exc:
-        return {"detail": str(exc)}
+        message = str(exc)
+        if "Backend returned 401" in message and "Invalid email or password" in message:
+            return {
+                "detail": (
+                    "Invalid email or password. If this is your first time using the deployed app, "
+                    "create an account in the Register tab first."
+                ),
+                "status_code": 401,
+            }
+        return {"detail": message}
 
 
 def search_jobs(data):

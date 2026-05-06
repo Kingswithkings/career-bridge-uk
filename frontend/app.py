@@ -172,6 +172,10 @@ def auth_screen():
         password = st.text_input("Password", type="password", key="login_password")
 
         if st.button("Login"):
+            if not email.strip() or not password.strip():
+                st.warning("Enter your email and password.")
+                return
+
             response = login_user(
                 {
                     "email": email.strip(),
@@ -198,6 +202,10 @@ def auth_screen():
         )
 
         if st.button("Create Account"):
+            if not reg_email.strip() or not reg_password.strip():
+                st.warning("Enter an email and password to create an account.")
+                return
+
             response = register_user(
                 {
                     "full_name": full_name.strip(),
