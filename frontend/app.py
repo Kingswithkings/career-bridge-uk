@@ -22,6 +22,8 @@ from services.api_client import (
     prepare_interview,
     register_user,
     save_result,
+    get_results,
+    search_jobs,
 )
 
 st.set_page_config(
@@ -310,15 +312,14 @@ base_payload = {
     "experience_level": experience_level,
 }
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    [
-        "CV Tools",
-        "Job Match",
-        "Interview Preparation",
-        "AI Mock Interview",
-        "Saved Results",
-    ]
-)
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "CV Tools",
+    "Live Job Search",
+    "Job Match",
+    "Interview Preparation",
+    "AI Mock Interview",
+    "Saved Results"
+])
 
 with tab1:
     col1, col2 = st.columns(2)
@@ -385,6 +386,49 @@ with tab1:
                 )
 
 with tab2:
+    st.header("Live UK Job Search")
+
+    job_query = st.text_input(
+        "Search job title or keyword",
+        value=target_role,
+        placeholder="e.g. warehouse operative, care assistant, support worker",
+    )
+
+    job_location = st.text_input(
+        "Search location",
+        value=location,
+        placeholder="e.g. Doncaster, London, Manchester",
+    )
+
+    results_per_page = st.slider("Number of results", 5, 30, 10)
+
+    if st.button("Search Live Jobs"):
+        response = search_jobs(
+            {
+                "query": job_query,
+                "location": job_location,
+                "page": 1,
+                "results_per_page": results_per_page,
+            }
+        )
+
+        if "detail" in response:
+            st.error(response["detail"])
+        else:
+            st.success(f"Found approximately {response['count']} jobs")
+
+            for job in response["results"]:
+                with st.expander(f"{job.get('title')} — {job.get('company')}"):
+                    st.write(f"**Location:** {job.get('location')}")
+                    st.write(
+                        f"**Salary:** {job.get('salary_min')} - {job.get('salary_max')}"
+                    )
+                    st.write(job.get("description"))
+
+                    if job.get("redirect_url"):
+                        st.link_button("View / Apply", job.get("redirect_url"))
+
+with tab3:
     job_description = st.text_area("Paste the job description", height=180)
 
     if st.button("Match Job", use_container_width=True):
@@ -415,7 +459,7 @@ with tab2:
                 location,
             )
 
-with tab3:
+with tab4:
     interview_style = st.selectbox(
         "Interview style",
         [
@@ -425,6 +469,7 @@ with tab3:
             "NHS style",
             "Warehouse recruiter style",
             "Care sector style",
+            "AI recruiter style",
         ],
     )
     interview_job_description = st.text_area(
@@ -481,7 +526,7 @@ with tab3:
                 location,
             )
 
-with tab4:
+with tab5:
     mock_interview_style = st.selectbox(
         "Interview style",
         [
@@ -553,7 +598,7 @@ with tab4:
         ]
         st.rerun()
 
-with tab5:
+with tab6:
     if st.button("Refresh Saved Results", use_container_width=True):
         try:
             st.session_state.saved_results = get_results()

@@ -103,3 +103,10 @@ def login_user(data):
         return post_json("/api/auth/login", data)
     except RuntimeError as exc:
         return {"detail": str(exc)}
+
+
+def search_jobs(data):
+    try:
+        return post_json("/api/jobs/search", data)
+    except RuntimeError as exc:
+        return {"detail": str(exc)}
