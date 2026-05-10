@@ -40,6 +40,27 @@ cd /Users/1stkings/Careerbridge-uk
 backend/.venv/bin/uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```
 
+For deployment, set `DATABASE_URL` to a persistent PostgreSQL database. The
+default SQLite database is only suitable for local development; on ephemeral
+hosts such as Render, accounts can disappear after a restart or redeploy, which
+will make valid-looking logins return `401 Invalid email or password`.
+
+Optional registration confirmation email settings in `backend/.env`:
+
+```text
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=your-smtp-user
+SMTP_PASSWORD=your-smtp-password
+SMTP_FROM_EMAIL=no-reply@example.com
+SMTP_FROM_NAME=CareerBridge UK
+SMTP_USE_TLS=true
+FRONTEND_URL=https://your-frontend-url
+```
+
+If these are not set, account registration still succeeds and the confirmation
+email is skipped.
+
 Frontend:
 
 ```bash

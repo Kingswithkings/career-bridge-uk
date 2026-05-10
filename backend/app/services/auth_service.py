@@ -10,6 +10,10 @@ def normalize_email(email: str) -> str:
     return email.strip().lower()
 
 
+def normalize_password(password: str) -> str:
+    return password.strip()
+
+
 def register_user(
     db: Session,
     email: str,
@@ -17,6 +21,11 @@ def register_user(
     full_name: str | None = None,
 ):
     email = normalize_email(email)
+    password = normalize_password(password)
+
+    if not password:
+        raise HTTPException(status_code=400, detail="Password is required")
+
     existing_user = db.query(User).filter(func.lower(User.email) == email).first()
 
     if existing_user:
@@ -43,6 +52,7 @@ def register_user(
 
 def login_user(db: Session, email: str, password: str):
     email = normalize_email(email)
+    password = normalize_password(password)
     user = db.query(User).filter(func.lower(User.email) == email).first()
 
     if not user or not verify_password(password, user.hashed_password):
