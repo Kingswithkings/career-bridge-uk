@@ -11,6 +11,9 @@ ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://careerbridge-uk.streamlit.app")
+IS_RENDER = os.getenv("RENDER", "").strip().lower() == "true"
+APP_ENV = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development")).strip().lower()
+IS_PRODUCTION = APP_ENV in {"production", "prod"} or IS_RENDER
 
 SMTP_HOST = os.getenv("SMTP_HOST")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))

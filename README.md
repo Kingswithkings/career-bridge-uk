@@ -48,6 +48,7 @@ will make valid-looking logins return `401 Invalid email or password`.
 Optional registration confirmation email settings in `backend/.env`:
 
 ```text
+DATABASE_URL=postgresql://user:password@host:5432/database
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USERNAME=your-smtp-user
