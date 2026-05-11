@@ -102,10 +102,7 @@ def call_backend(action, payload, result_key):
 
 def format_auth_error(message):
     if "Backend returned 401" in message or "Invalid email or password" in message:
-        return (
-            "The email or password is not correct. Check your details and try again, "
-            "or create an account in the Register tab."
-        )
+        return "Invalid email or password. Please check your details or create an account first."
     if "Email already registered" in message:
         return "That email is already registered. Use the Login tab with the password you created."
 

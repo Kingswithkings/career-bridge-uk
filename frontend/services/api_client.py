@@ -130,15 +130,17 @@ def login_user(data):
         return post_json("/api/auth/login", data)
     except RuntimeError as exc:
         message = str(exc)
+
         if "Backend returned 401" in message:
             return {
-                "detail": (
-                    "The email or password is not correct. Check your details and try again, "
-                    "or create an account in the Register tab."
-                ),
+                "detail": "Invalid email or password. Please check your details or create an account first.",
                 "status_code": 401,
             }
-        return {"detail": message}
+
+        return {
+            "detail": "Login failed. Please try again.",
+            "status_code": 500,
+        }
 
 
 def search_jobs(data):
