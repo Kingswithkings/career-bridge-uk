@@ -130,11 +130,11 @@ def login_user(data):
         return post_json("/api/auth/login", data)
     except RuntimeError as exc:
         message = str(exc)
-        if "Backend returned 401" in message and "Invalid email or password" in message:
+        if "Backend returned 401" in message:
             return {
                 "detail": (
-                    "Invalid email or password. If this is your first time using the deployed app, "
-                    "create an account in the Register tab first."
+                    "The email or password is not correct. Check your details and try again, "
+                    "or create an account in the Register tab."
                 ),
                 "status_code": 401,
             }
