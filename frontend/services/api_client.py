@@ -5,6 +5,10 @@ import streamlit as st
 
 DEFAULT_BACKEND_URL = "https://career-bridge-uk.onrender.com"
 TIMEOUT_SECONDS = 60
+INVALID_LOGIN_RESPONSE = {
+    "detail": "Invalid email or password. Please check your details or create an account first.",
+    "status_code": 401,
+}
 
 
 def get_base_url():
@@ -43,6 +47,9 @@ def post_json(path, data):
             "backend/.venv/bin/uvicorn backend.app.main:app --reload"
         ) from exc
     except requests.exceptions.HTTPError as exc:
+        if path == "/api/auth/login" and response.status_code == 401:
+            return INVALID_LOGIN_RESPONSE
+
         try:
             detail = response.json()
         except ValueError:
@@ -132,10 +139,7 @@ def login_user(data):
         message = str(exc)
 
         if "Backend returned 401" in message:
-            return {
-                "detail": "Invalid email or password. Please check your details or create an account first.",
-                "status_code": 401,
-            }
+            return INVALID_LOGIN_RESPONSE
 
         return {
             "detail": "Login failed. Please try again.",
