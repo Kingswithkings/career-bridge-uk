@@ -35,6 +35,155 @@ from services.api_client import (
     search_jobs,
 )
 
+TARGET_ROLE_OPTIONS = [
+    "Warehouse Operative",
+    "Account Manager",
+    "Accountant",
+    "Accounts Assistant",
+    "Administrative Assistant",
+    "Administrator",
+    "AI Engineer",
+    "Apprentice",
+    "Architect",
+    "Assistant Manager",
+    "Barista",
+    "Bartender",
+    "Bookkeeper",
+    "Business Analyst",
+    "Business Development Manager",
+    "Care Assistant",
+    "Care Coordinator",
+    "Chef",
+    "Civil Engineer",
+    "Cleaner",
+    "Cloud Engineer",
+    "Commis Chef",
+    "Compliance Officer",
+    "Construction Labourer",
+    "Content Creator",
+    "Customer Service Advisor",
+    "Customer Service Assistant",
+    "Cyber Security Analyst",
+    "Data Analyst",
+    "Data Engineer",
+    "Data Entry Clerk",
+    "Data Scientist",
+    "Delivery Driver",
+    "DevOps Engineer",
+    "Digital Marketing Executive",
+    "Doctor",
+    "Electrician",
+    "Executive Assistant",
+    "Finance Assistant",
+    "Finance Manager",
+    "Forklift Driver",
+    "Frontend Developer",
+    "Full Stack Developer",
+    "Graphic Designer",
+    "Healthcare Assistant",
+    "Helpdesk Analyst",
+    "Hotel Receptionist",
+    "HR Advisor",
+    "HR Assistant",
+    "IT Support Technician",
+    "Junior Developer",
+    "Kitchen Assistant",
+    "Learning Support Assistant",
+    "Legal Assistant",
+    "Machine Learning Engineer",
+    "Marketing Assistant",
+    "Mechanical Engineer",
+    "Nurse",
+    "Office Assistant",
+    "Operations Manager",
+    "Picker Packer",
+    "Plumber",
+    "Primary Teacher",
+    "Product Manager",
+    "Production Operative",
+    "Project Coordinator",
+    "Project Manager",
+    "QA Engineer",
+    "Receptionist",
+    "Recruitment Consultant",
+    "Retail Assistant",
+    "Sales Assistant",
+    "Sales Executive",
+    "Secondary Teacher",
+    "Security Officer",
+    "Social Media Manager",
+    "Social Worker",
+    "Software Developer",
+    "Software Engineer",
+    "Support Administrator",
+    "Support Worker",
+    "Teaching Assistant",
+    "UX Designer",
+    "Van Driver",
+    "Web Developer",
+]
+
+LOCATION_OPTIONS = [
+    "Doncaster",
+    "London",
+    "Manchester",
+    "Birmingham",
+    "Leeds",
+    "Sheffield",
+    "Liverpool",
+    "Bristol",
+    "Nottingham",
+    "Newcastle",
+    "Glasgow",
+    "Edinburgh",
+    "Cardiff",
+    "Belfast",
+    "Bradford",
+    "Brighton",
+    "Cambridge",
+    "Coventry",
+    "Derby",
+    "Hull",
+    "Leicester",
+    "Milton Keynes",
+    "Northampton",
+    "Norwich",
+    "Oxford",
+    "Peterborough",
+    "Portsmouth",
+    "Reading",
+    "Southampton",
+    "Stoke-on-Trent",
+    "Sunderland",
+    "Swansea",
+    "Wakefield",
+    "York",
+    "Remote",
+]
+
+EXPERIENCE_LEVEL_OPTIONS = [
+    "Entry-level",
+    "No experience",
+    "Apprenticeship",
+    "Internship",
+    "Graduate",
+    "Trainee",
+    "Junior",
+    "Some experience",
+    "1 year experience",
+    "2 years experience",
+    "3 years experience",
+    "4 years experience",
+    "5+ years experience",
+    "Experienced",
+    "Senior",
+    "Lead",
+    "Supervisor",
+    "Manager",
+    "Career change",
+    "Returning to work",
+]
+
 st.set_page_config(
     page_title="CareerBridge UK",
     page_icon="🇬🇧",
@@ -107,6 +256,13 @@ def format_auth_error(message):
         return "That email is already registered. Use the Login tab with the password you created."
 
     return message
+
+
+def include_current_option(options, current_value):
+    if current_value and current_value not in options:
+        return [current_value, *options]
+
+    return options
 
 
 def save_current_result(feature_type, input_text, result_text, target_role, location):
@@ -332,11 +488,23 @@ with st.sidebar:
     st.header("Candidate Details")
     uploaded_cv = st.file_uploader("Upload your CV", type=["pdf", "docx", "txt"])
     manual_cv_text = st.text_area("Or paste your CV manually", height=200)
-    target_role = st.text_input("Target role", "Warehouse Operative")
-    location = st.text_input("Location", "Doncaster")
+    target_role = st.selectbox(
+        "Target role",
+        TARGET_ROLE_OPTIONS,
+        accept_new_options=True,
+        placeholder="Select or type a job title",
+    )
+    location = st.selectbox(
+        "Location",
+        LOCATION_OPTIONS,
+        accept_new_options=True,
+        placeholder="Select or type a location",
+    )
     experience_level = st.selectbox(
         "Experience level",
-        ["Entry-level", "Some experience", "Experienced", "Career change"],
+        EXPERIENCE_LEVEL_OPTIONS,
+        accept_new_options=True,
+        placeholder="Select or type your experience level",
     )
     st.divider()
     if st.button("Logout", use_container_width=True):
@@ -500,15 +668,22 @@ with tab1:
 with tab2:
     st.header("Live UK Job Search")
 
-    job_query = st.text_input(
+    job_query_options = include_current_option(TARGET_ROLE_OPTIONS, target_role)
+    job_location_options = include_current_option(LOCATION_OPTIONS, location)
+
+    job_query = st.selectbox(
         "Search job title or keyword",
-        value=target_role,
+        job_query_options,
+        index=job_query_options.index(target_role) if target_role in job_query_options else None,
+        accept_new_options=True,
         placeholder="e.g. warehouse operative, care assistant, support worker",
     )
 
-    job_location = st.text_input(
+    job_location = st.selectbox(
         "Search location",
-        value=location,
+        job_location_options,
+        index=job_location_options.index(location) if location in job_location_options else None,
+        accept_new_options=True,
         placeholder="e.g. Doncaster, London, Manchester",
     )
 
