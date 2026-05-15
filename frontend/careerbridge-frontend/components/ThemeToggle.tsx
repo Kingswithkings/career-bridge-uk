@@ -36,25 +36,25 @@ export default function ThemeToggle() {
   const [mode, setMode] = useState<ThemeMode>("system");
 
   useEffect(() => {
-    applyTheme(mode);
-
-    if (mode !== "system") {
-      return;
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
-    const handleChange = () => applyTheme("system");
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [mode]);
-
-  useEffect(() => {
     const savedMode = getInitialMode();
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: light)");
+
+    applyTheme(savedMode);
 
     if (savedMode !== "system") {
       window.setTimeout(() => setMode(savedMode), 0);
     }
+
+    function handleSystemThemeChange() {
+      const currentMode = window.localStorage.getItem("theme-mode");
+
+      if (!currentMode || currentMode === "system") {
+        applyTheme("system");
+      }
+    }
+
+    mediaQuery.addEventListener("change", handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
   }, []);
 
   function selectMode(nextMode: ThemeMode) {
