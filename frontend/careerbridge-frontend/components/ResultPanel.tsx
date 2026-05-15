@@ -1,0 +1,123 @@
+type SavedResult = {
+  id: number;
+  feature_type: string;
+  target_role?: string | null;
+  location?: string | null;
+  result_text: string;
+  created_at: string;
+};
+
+type JobItem = {
+  title?: string | null;
+  company?: string | null;
+  location?: string | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  description?: string | null;
+  redirect_url?: string | null;
+};
+
+function parseJson(text: string) {
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function firstTextValue(value: Record<string, unknown>) {
+  for (const item of Object.values(value)) {
+    if (typeof item === "string") {
+      return item;
+    }
+  }
+
+  return "";
+}
+
+function isSavedResult(value: unknown): value is SavedResult {
+  return (
+    isRecord(value) &&
+    typeof value.id === "number" &&
+    typeof value.feature_type === "string" &&
+    typeof value.result_text === "string"
+  );
+}
+
+function isJobItem(value: unknown): value is JobItem {
+  return isRecord(value) && ("title" in value || "company" in value || "redirect_url" in value);
+}
+
+export default function ResultPanel({ result }: { result: string }) {
+  const parsed = parseJson(result);
+
+  if (Array.isArray(parsed) && parsed.every(isSavedResult)) {
+    return (
+      <div className="space-y-4">
+        {parsed.length === 0 && <p className="text-slate-300">No saved results yet.</p>}
+
+        {parsed.map((item) => (
+          <article key={item.id} className="bg-slate-900 border border-slate-800 p-5 rounded">
+            <div className="flex flex-wrap gap-3 text-sm text-slate-400">
+              <span>{item.feature_type.replaceAll("_", " ")}</span>
+              {item.target_role && <span>{item.target_role}</span>}
+              {item.location && <span>{item.location}</span>}
+              <span>{new Date(item.created_at).toLocaleString()}</span>
+            </div>
+            <p className="mt-4 whitespace-pre-wrap text-slate-100">{item.result_text}</p>
+          </article>
+        ))}
+      </div>
+    );
+  }
+
+  if (isRecord(parsed) && Array.isArray(parsed.results) && parsed.results.every(isJobItem)) {
+    return (
+      <div className="space-y-4">
+        <p className="text-slate-300">{String(parsed.count ?? parsed.results.length)} jobs found.</p>
+
+        {parsed.results.map((job, index) => (
+          <article key={`${job.title}-${job.company}-${index}`} className="bg-slate-900 border border-slate-800 p-5 rounded">
+            <h2 className="text-xl font-semibold">{job.title || "Untitled role"}</h2>
+            <p className="text-slate-400">
+              {[job.company, job.location].filter(Boolean).join(" - ")}
+            </p>
+            {(job.salary_min || job.salary_max) && (
+              <p className="mt-2 text-slate-300">
+                Salary: {[job.salary_min, job.salary_max].filter(Boolean).join(" - ")}
+              </p>
+            )}
+            {job.description && <p className="mt-3 text-slate-200 whitespace-pre-wrap">{job.description}</p>}
+            {job.redirect_url && (
+              <a href={job.redirect_url} className="mt-4 inline-block text-blue-400" target="_blank">
+                View job
+              </a>
+            )}
+          </article>
+        ))}
+      </div>
+    );
+  }
+
+  if (isRecord(parsed)) {
+    const text = firstTextValue(parsed);
+
+    if (text) {
+      return (
+        <section className="bg-slate-900 border border-slate-800 p-6 rounded">
+          <p className="whitespace-pre-wrap text-slate-100">{text}</p>
+        </section>
+      );
+    }
+  }
+
+  return (
+    <pre className="bg-black p-6 rounded whitespace-pre-wrap text-sm">
+      {result}
+    </pre>
+  );
+}

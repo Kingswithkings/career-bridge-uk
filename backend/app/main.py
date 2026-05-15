@@ -3,6 +3,8 @@ from importlib import import_module
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 
 from .api.routes.auth_routes import router as auth_router
 from .api.routes.cv_routes import router as cv_router
@@ -15,10 +17,80 @@ import_module(f"{__package__}.models.result_model")
 import_module(f"{__package__}.models.user_model")
 Base.metadata.create_all(bind=engine)
 
+
+def ensure_user_verification_columns() -> None:
+    inspector = inspect(engine)
+
+    if "users" not in inspector.get_table_names():
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("users")}
+    dialect = engine.dialect.name
+
+    statements = []
+    if "is_email_verified" not in existing_columns:
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+        else:
+            statements.append(
+                "ALTER TABLE users ADD COLUMN is_email_verified BOOLEAN NOT NULL DEFAULT 0"
+            )
+
+    if "email_verification_code_hash" not in existing_columns:
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_code_hash VARCHAR"
+            )
+        else:
+            statements.append("ALTER TABLE users ADD COLUMN email_verification_code_hash VARCHAR")
+
+    if "email_verification_expires_at" not in existing_columns:
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires_at TIMESTAMP"
+            )
+        else:
+            statements.append("ALTER TABLE users ADD COLUMN email_verification_expires_at DATETIME")
+
+    if "password_reset_code_hash" not in existing_columns:
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_code_hash VARCHAR"
+            )
+        else:
+            statements.append("ALTER TABLE users ADD COLUMN password_reset_code_hash VARCHAR")
+
+    if "password_reset_expires_at" not in existing_columns:
+        if dialect == "postgresql":
+            statements.append(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMP"
+            )
+        else:
+            statements.append("ALTER TABLE users ADD COLUMN password_reset_expires_at DATETIME")
+
+    if not statements:
+        return
+
+    with engine.begin() as connection:
+        for statement in statements:
+            connection.execute(text(statement))
+
+
+ensure_user_verification_columns()
+
 app = FastAPI(
     title="CareerBridge UK API",
     description="AI-powered career mentor for UK job seekers.",
     version="1.0.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth_router)
