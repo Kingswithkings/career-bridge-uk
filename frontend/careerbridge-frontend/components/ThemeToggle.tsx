@@ -14,10 +14,6 @@ function getSystemTheme(): ResolvedTheme {
 }
 
 function getInitialMode(): ThemeMode {
-  if (typeof window === "undefined") {
-    return "system";
-  }
-
   const savedTheme = window.localStorage.getItem("theme-mode");
 
   if (savedTheme === "system" || savedTheme === "light" || savedTheme === "dark") {
@@ -37,7 +33,7 @@ function applyTheme(mode: ThemeMode) {
 }
 
 export default function ThemeToggle() {
-  const [mode, setMode] = useState<ThemeMode>(getInitialMode);
+  const [mode, setMode] = useState<ThemeMode>("system");
 
   useEffect(() => {
     applyTheme(mode);
@@ -52,6 +48,14 @@ export default function ThemeToggle() {
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, [mode]);
+
+  useEffect(() => {
+    const savedMode = getInitialMode();
+
+    if (savedMode !== "system") {
+      window.setTimeout(() => setMode(savedMode), 0);
+    }
+  }, []);
 
   function selectMode(nextMode: ThemeMode) {
     setMode(nextMode);
