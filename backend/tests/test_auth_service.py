@@ -6,7 +6,12 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.app.database import Base
 from backend.app.models.user_model import User
-from backend.app.services.auth_service import login_user, register_user
+from backend.app.services.auth_service import (
+    create_password_reset_code,
+    login_user,
+    register_user,
+    reset_user_password,
+)
 
 
 class AuthServiceTestCase(unittest.TestCase):
@@ -59,6 +64,31 @@ class AuthServiceTestCase(unittest.TestCase):
 
         self.assertEqual(exc_info.exception.status_code, 400)
         self.assertEqual(exc_info.exception.detail, "Password is required")
+
+    def test_password_reset_code_updates_password(self):
+        register_user(
+            self.db,
+            email="user@example.com",
+            password="old-password",
+        )
+
+        reset_details = create_password_reset_code(self.db, "user@example.com")
+        self.assertIsNotNone(reset_details)
+
+        response = reset_user_password(
+            self.db,
+            email="user@example.com",
+            code=reset_details["code"],
+            new_password="new-password",
+        )
+        self.assertEqual(response["message"], "Password reset successfully")
+
+        login_response = login_user(
+            self.db,
+            email="user@example.com",
+            password="new-password",
+        )
+        self.assertTrue(login_response["access_token"])
 
 
 if __name__ == "__main__":

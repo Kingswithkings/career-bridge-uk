@@ -1,0 +1,58 @@
+"use client";
+
+import { useState } from "react";
+import { apiPost, endpoints } from "@/lib/api";
+import Link from "next/link";
+
+export default function RegisterPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function register() {
+    setMessage("");
+
+    try {
+      await apiPost(endpoints.register, { email, password });
+      setMessage("Account created successfully. A welcome email has been sent to your inbox.");
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : "Registration failed.");
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-950 text-white px-6 py-16">
+      <div className="max-w-md mx-auto bg-slate-900 p-6 rounded-2xl space-y-4">
+        <h1 className="text-3xl font-bold">Create Account</h1>
+
+        <input
+          className="w-full p-3 rounded bg-slate-800 border border-slate-700"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <input
+          className="w-full p-3 rounded bg-slate-800 border border-slate-700"
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <button
+          onClick={register}
+          className="w-full bg-green-600 py-3 rounded font-semibold"
+        >
+          Register
+        </button>
+
+        {message && <p className="text-slate-300">{message}</p>}
+
+        <Link href="/login" className="text-blue-400">
+          Already have an account? Login
+        </Link>
+      </div>
+    </main>
+  );
+}
