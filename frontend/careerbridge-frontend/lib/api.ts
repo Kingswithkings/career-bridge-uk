@@ -1,4 +1,5 @@
-const API_BASE_URL = "";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "https://career-bridge-uk.onrender.com";
 
 export async function apiPost(path: string, data: unknown, token?: string) {
   const res = await fetch(`${API_BASE_URL}${path}`, {
@@ -12,10 +13,23 @@ export async function apiPost(path: string, data: unknown, token?: string) {
     throw new Error("Could not reach the API. Check the backend URL and CORS settings.");
   });
 
-  const result = await res.json().catch(() => null);
+  const text = await res.text();
+
+  let result: any = null;
+
+  try {
+    result = text ? JSON.parse(text) : null;
+  } catch {
+    result = text;
+  }
 
   if (!res.ok) {
-    throw new Error(result?.detail || "Request failed");
+    throw new Error(
+      result?.detail ||
+        result?.message ||
+        JSON.stringify(result) ||
+        `Request failed with status ${res.status}`
+    );
   }
 
   return result;
@@ -30,10 +44,23 @@ export async function apiGet(path: string, token?: string) {
     throw new Error("Could not reach the API. Check the backend URL and CORS settings.");
   });
 
-  const result = await res.json().catch(() => null);
+  const text = await res.text();
+
+  let result: any = null;
+
+  try {
+    result = text ? JSON.parse(text) : null;
+  } catch {
+    result = text;
+  }
 
   if (!res.ok) {
-    throw new Error(result?.detail || "Request failed");
+    throw new Error(
+      result?.detail ||
+        result?.message ||
+        JSON.stringify(result) ||
+        `Request failed with status ${res.status}`
+    );
   }
 
   return result;
@@ -56,5 +83,5 @@ export const endpoints = {
   searchJobs: "/api/jobs/search",
 
   saveResult: "/api/results/save",
-  getResults: "/api/results",
+  getResults: "/api/results/",
 };
