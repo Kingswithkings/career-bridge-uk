@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { apiGet, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import AuthGate from "@/components/AuthGate";
 import ResultPanel from "@/components/ResultPanel";
 
 export default function ResultsPage() {
@@ -32,7 +33,8 @@ export default function ResultsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white px-6 py-12">
+    <AuthGate>
+      <main className="min-h-screen bg-slate-950 text-white px-6 py-12">
       <div className="max-w-5xl mx-auto space-y-6">
         <h1 className="text-4xl font-bold">Saved Results</h1>
 
@@ -42,6 +44,7 @@ export default function ResultsPage() {
 
         {result && <ResultPanel result={result} />}
       </div>
-    </main>
+      </main>
+    </AuthGate>
   );
 }

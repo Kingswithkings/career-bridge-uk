@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { apiPost, endpoints } from "@/lib/api";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function RegisterPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -13,8 +16,17 @@ export default function RegisterPage() {
     setMessage("");
 
     try {
-      await apiPost(endpoints.register, { email, password });
-      setMessage("Account created successfully. A welcome email has been sent to your inbox.");
+      const data = await apiPost(endpoints.register, { email, password });
+
+      if (!data.access_token) {
+        throw new Error("Registration response did not include an access token.");
+      }
+
+      localStorage.setItem("token", data.access_token);
+      localStorage.setItem("email", data.email || email);
+      window.dispatchEvent(new Event("auth-change"));
+
+      router.push("/dashboard");
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : "Registration failed.");
     }

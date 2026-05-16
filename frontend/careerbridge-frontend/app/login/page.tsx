@@ -18,8 +18,13 @@ export default function LoginPage() {
     try {
       const data = await apiPost(endpoints.login, { email, password });
 
+      if (!data.access_token) {
+        throw new Error("Login response did not include an access token.");
+      }
+
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("email", email);
+      window.dispatchEvent(new Event("auth-change"));
 
       router.push("/dashboard");
     } catch (err: unknown) {

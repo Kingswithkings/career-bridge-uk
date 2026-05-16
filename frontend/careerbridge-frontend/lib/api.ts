@@ -1,7 +1,31 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://career-bridge-uk.onrender.com";
 
-export async function apiPost(path: string, data: unknown, token?: string) {
+type ApiErrorResponse = {
+  detail?: string;
+  message?: string;
+};
+
+type ApiResponse = Record<string, unknown> & {
+  access_token?: string;
+  email?: string;
+  message?: string;
+};
+
+function parseErrorMessage(result: unknown, status: number) {
+  if (typeof result === "object" && result !== null) {
+    const response = result as ApiErrorResponse;
+    return response.detail || response.message || JSON.stringify(result);
+  }
+
+  if (typeof result === "string" && result) {
+    return result;
+  }
+
+  return `Request failed with status ${status}`;
+}
+
+export async function apiPost(path: string, data: unknown, token?: string): Promise<ApiResponse> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: {
@@ -15,7 +39,7 @@ export async function apiPost(path: string, data: unknown, token?: string) {
 
   const text = await res.text();
 
-  let result: any = null;
+  let result: unknown = null;
 
   try {
     result = text ? JSON.parse(text) : null;
@@ -24,18 +48,13 @@ export async function apiPost(path: string, data: unknown, token?: string) {
   }
 
   if (!res.ok) {
-    throw new Error(
-      result?.detail ||
-        result?.message ||
-        JSON.stringify(result) ||
-        `Request failed with status ${res.status}`
-    );
+    throw new Error(parseErrorMessage(result, res.status));
   }
 
-  return result;
+  return result as ApiResponse;
 }
 
-export async function apiGet(path: string, token?: string) {
+export async function apiGet(path: string, token?: string): Promise<ApiResponse> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -46,7 +65,7 @@ export async function apiGet(path: string, token?: string) {
 
   const text = await res.text();
 
-  let result: any = null;
+  let result: unknown = null;
 
   try {
     result = text ? JSON.parse(text) : null;
@@ -55,15 +74,10 @@ export async function apiGet(path: string, token?: string) {
   }
 
   if (!res.ok) {
-    throw new Error(
-      result?.detail ||
-        result?.message ||
-        JSON.stringify(result) ||
-        `Request failed with status ${res.status}`
-    );
+    throw new Error(parseErrorMessage(result, res.status));
   }
 
-  return result;
+  return result as ApiResponse;
 }
 
 export const endpoints = {

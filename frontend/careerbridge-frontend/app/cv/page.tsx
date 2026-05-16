@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { apiPost, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import AuthGate from "@/components/AuthGate";
 import ResultPanel from "@/components/ResultPanel";
 
 export default function CvPage() {
@@ -138,7 +139,8 @@ export default function CvPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white px-6 py-12">
+    <AuthGate>
+      <main className="min-h-screen bg-slate-950 text-white px-6 py-12">
       <div className="max-w-5xl mx-auto space-y-6">
         <h1 className="text-4xl font-bold">CV Tools</h1>
 
@@ -178,6 +180,7 @@ export default function CvPage() {
 
         {result && <ResultPanel result={result} />}
       </div>
-    </main>
+      </main>
+    </AuthGate>
   );
 }
