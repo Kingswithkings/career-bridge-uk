@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
 from ...api.dependencies import get_current_user
 from ...limiter import limiter
@@ -7,6 +7,7 @@ from ...services.cv_service import (
     generate_improved_cv_from_analysis,
     generate_uk_cv,
 )
+from ...utils.cv_file_parser import extract_cv_text
 
 try:
     from backend.schemas.cv_schema import (
@@ -28,6 +29,15 @@ except ModuleNotFoundError:
     )
 
 router = APIRouter(prefix="/api/cv", tags=["CV"])
+
+
+@router.post("/upload")
+async def upload_candidate_cv(
+    file: UploadFile = File(...),
+    _current_user=Depends(get_current_user),
+):
+    text = await extract_cv_text(file)
+    return {"filename": file.filename, "cv_text": text}
 
 
 @router.post("/analyze", response_model=CVAnalysisResponse)

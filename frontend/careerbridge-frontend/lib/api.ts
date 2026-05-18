@@ -65,6 +65,46 @@ export async function apiPost(path: string, data: unknown, token?: string): Prom
   return result as ApiResponse;
 }
 
+export async function apiUploadFile(path: string, file: File, token?: string): Promise<ApiResponse> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    signal: controller.signal,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  })
+    .catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error("The API took too long to read that file. Please try again.");
+      }
+
+      throw new Error("Could not reach the API. Check the backend URL and CORS settings.");
+    })
+    .finally(() => window.clearTimeout(timeoutId));
+
+  const text = await res.text();
+
+  let result: unknown = null;
+
+  try {
+    result = text ? JSON.parse(text) : null;
+  } catch {
+    result = text;
+  }
+
+  if (!res.ok) {
+    throw new Error(parseErrorMessage(result, res.status));
+  }
+
+  return result as ApiResponse;
+}
+
 export async function apiGet(path: string, token?: string): Promise<ApiResponse> {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -108,6 +148,7 @@ export const endpoints = {
   resetPassword: "/api/auth/reset-password",
 
   analyzeCv: "/api/cv/analyze",
+  uploadCv: "/api/cv/upload",
   generateCv: "/api/cv/generate",
   generateCvFromAnalysis: "/api/cv/generate-from-analysis",
 

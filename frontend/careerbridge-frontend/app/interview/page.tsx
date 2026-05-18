@@ -1,7 +1,7 @@
 "use client";
 
 import { type ChangeEvent, useState } from "react";
-import { apiPost, endpoints } from "@/lib/api";
+import { apiPost, apiUploadFile, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
 import ResultPanel from "@/components/ResultPanel";
@@ -50,29 +50,36 @@ export default function InterviewPage() {
   }
 
   async function uploadCv(event: ChangeEvent<HTMLInputElement>) {
+    const token = requireToken();
     const file = event.target.files?.[0];
 
-    if (!file) {
+    if (!token || !file) {
       return;
     }
 
-    const isTextFile =
+    const isSupportedFile =
       file.type.startsWith("text/") ||
-      /\.(txt|md|markdown|rtf)$/i.test(file.name);
+      /\.(txt|md|markdown|rtf|pdf|docx)$/i.test(file.name);
 
-    if (!isTextFile) {
-      setResult("Please upload a text CV file for now, or paste your CV text below.");
+    if (!isSupportedFile) {
+      setResult("Please upload a CV as PDF, DOCX, TXT, MD, Markdown, or RTF.");
       event.target.value = "";
       return;
     }
 
     try {
-      const text = await file.text();
-      setCvText(text);
+      setResult(`Reading ${file.name}...`);
+      const data = await apiUploadFile(endpoints.uploadCv, file, token);
+
+      if (typeof data.cv_text !== "string") {
+        throw new Error("The upload response did not include CV text.");
+      }
+
+      setCvText(data.cv_text);
       setCvFileName(file.name);
       setResult(`${file.name} uploaded. You can now prepare for interviews.`);
-    } catch {
-      setResult("Could not read that CV file. Please paste your CV text below.");
+    } catch (err: unknown) {
+      setResult(err instanceof Error ? err.message : "Could not read that CV file.");
     }
   }
 
@@ -214,7 +221,7 @@ export default function InterviewPage() {
           <input
             id="interview-cv-upload"
             type="file"
-            accept=".txt,.md,.markdown,.rtf,text/plain,text/markdown,text/rtf"
+            accept=".pdf,.docx,.txt,.md,.markdown,.rtf,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/rtf"
             onChange={uploadCv}
             className="mt-3 block w-full cursor-pointer rounded bg-slate-800 text-sm text-slate-300 file:mr-4 file:cursor-pointer file:border-0 file:bg-blue-600 file:px-4 file:py-3 file:font-semibold file:text-white"
           />
