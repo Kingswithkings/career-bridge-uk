@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ChangeEvent, useState } from "react";
 import { apiPost, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
@@ -17,6 +17,7 @@ export default function InterviewPage() {
 
   const [targetRole, setTargetRole] = useState("");
   const [cvText, setCvText] = useState("");
+  const [cvFileName, setCvFileName] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [result, setResult] = useState("");
   const [lastFeatureType, setLastFeatureType] = useState("");
@@ -46,6 +47,33 @@ export default function InterviewPage() {
     setResult(text);
     setLastResultText(text);
     setLastFeatureType(featureType);
+  }
+
+  async function uploadCv(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const isTextFile =
+      file.type.startsWith("text/") ||
+      /\.(txt|md|markdown|rtf)$/i.test(file.name);
+
+    if (!isTextFile) {
+      setResult("Please upload a text CV file for now, or paste your CV text below.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      setCvText(text);
+      setCvFileName(file.name);
+      setResult(`${file.name} uploaded. You can now prepare for interviews.`);
+    } catch {
+      setResult("Could not read that CV file. Please paste your CV text below.");
+    }
   }
 
   async function prepareInterview() {
@@ -178,6 +206,20 @@ export default function InterviewPage() {
           value={targetRole}
           onChange={(e) => setTargetRole(e.target.value)}
         />
+
+        <div className="rounded border border-slate-700 bg-slate-900 p-4">
+          <label className="block text-sm font-semibold text-slate-200" htmlFor="interview-cv-upload">
+            Upload CV
+          </label>
+          <input
+            id="interview-cv-upload"
+            type="file"
+            accept=".txt,.md,.markdown,.rtf,text/plain,text/markdown,text/rtf"
+            onChange={uploadCv}
+            className="mt-3 block w-full cursor-pointer rounded bg-slate-800 text-sm text-slate-300 file:mr-4 file:cursor-pointer file:border-0 file:bg-blue-600 file:px-4 file:py-3 file:font-semibold file:text-white"
+          />
+          {cvFileName && <p className="mt-2 text-sm text-slate-400">Loaded: {cvFileName}</p>}
+        </div>
 
         <textarea
           className="w-full p-3 rounded bg-slate-800 border border-slate-700 min-h-44"
