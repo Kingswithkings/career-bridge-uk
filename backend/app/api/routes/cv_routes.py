@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from ...api.dependencies import get_current_user
+from ...limiter import limiter
 from ...services.cv_service import (
     analyze_cv,
     generate_improved_cv_from_analysis,
@@ -30,18 +31,20 @@ router = APIRouter(prefix="/api/cv", tags=["CV"])
 
 
 @router.post("/analyze", response_model=CVAnalysisResponse)
+@limiter.limit("5/minute")
 def analyze_candidate_cv(
-    request: CVAnalysisRequest,
+    request: Request,
+    payload: CVAnalysisRequest,
     _current_user=Depends(get_current_user),
 ):
 
     try:
         result = analyze_cv(
-            cv_text=request.cv_text,
-            target_role=request.target_role,
-            location=request.location,
-            experience_level=request.experience_level,
-            visa_status=request.visa_status,
+            cv_text=payload.cv_text,
+            target_role=payload.target_role,
+            location=payload.location,
+            experience_level=payload.experience_level,
+            visa_status=payload.visa_status,
         )
         return CVAnalysisResponse(analysis=result)
     except Exception as exc:

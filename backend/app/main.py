@@ -4,6 +4,9 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import inspect, text
 
 from .api.routes.auth_routes import router as auth_router
@@ -12,6 +15,7 @@ from .api.routes.interview_routes import router as interview_router
 from .api.routes.job_routes import router as job_router
 from .api.routes.result_routes import router as result_router
 from .database import Base, engine
+from .limiter import limiter
 
 import_module(f"{__package__}.models.result_model")
 import_module(f"{__package__}.models.user_model")
@@ -86,9 +90,17 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://career-bridge-uk.1st-kings.com",
+        "https://career-bridge-uk.vercel.app",
+        "http://localhost:3000",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
