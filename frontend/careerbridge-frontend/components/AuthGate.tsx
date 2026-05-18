@@ -1,7 +1,12 @@
 "use client";
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+const LAST_ACTIVITY_KEY = "lastActivityAt";
+const activityEvents = ["click", "keydown", "mousemove", "scroll", "touchstart"];
 
 function subscribeToAuthChanges(callback: () => void) {
   window.addEventListener("storage", callback);
@@ -18,7 +23,75 @@ function getAuthToken() {
 }
 
 export default function AuthGate({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const token = useSyncExternalStore(subscribeToAuthChanges, getAuthToken, () => null);
+
+  useEffect(() => {
+    if (!token) {
+      return;
+    }
+
+    let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+
+    function logout() {
+      localStorage.removeItem("token");
+      localStorage.removeItem("email");
+      localStorage.removeItem(LAST_ACTIVITY_KEY);
+      window.dispatchEvent(new Event("auth-change"));
+      router.push("/login");
+    }
+
+    function getLastActivity() {
+      const lastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY));
+      return Number.isFinite(lastActivity) && lastActivity > 0 ? lastActivity : Date.now();
+    }
+
+    function scheduleLogout() {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+
+      const remainingTime = INACTIVITY_TIMEOUT_MS - (Date.now() - getLastActivity());
+
+      if (remainingTime <= 0) {
+        logout();
+        return;
+      }
+
+      timeoutId = window.setTimeout(scheduleLogout, remainingTime);
+    }
+
+    function recordActivity() {
+      localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+      scheduleLogout();
+    }
+
+    const existingLastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY));
+
+    if (
+      Number.isFinite(existingLastActivity) &&
+      existingLastActivity > 0 &&
+      Date.now() - existingLastActivity >= INACTIVITY_TIMEOUT_MS
+    ) {
+      logout();
+      return;
+    }
+
+    recordActivity();
+    activityEvents.forEach((eventName) => {
+      window.addEventListener(eventName, recordActivity, { passive: true });
+    });
+
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+
+      activityEvents.forEach((eventName) => {
+        window.removeEventListener(eventName, recordActivity);
+      });
+    };
+  }, [router, token]);
 
   if (token) {
     return children;
