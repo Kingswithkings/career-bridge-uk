@@ -5,6 +5,7 @@ import { apiPost, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
 import ResultPanel from "@/components/ResultPanel";
+import ActionButton from "@/components/ActionButton";
 
 export default function JobsPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function JobsPage() {
   const [result, setResult] = useState("");
   const [lastFeatureType, setLastFeatureType] = useState("");
   const [lastResultText, setLastResultText] = useState("");
+  const [pendingAction, setPendingAction] = useState<"search" | "match" | "save" | null>(null);
 
   function getToken() {
     return localStorage.getItem("token") || "";
@@ -47,6 +49,9 @@ export default function JobsPage() {
       return;
     }
 
+    setResult("Searching jobs...");
+    setPendingAction("search");
+
     try {
       const data = await apiPost(
         endpoints.searchJobs,
@@ -60,6 +65,8 @@ export default function JobsPage() {
       showResult(data, "job_search");
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "Job search failed.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -69,6 +76,9 @@ export default function JobsPage() {
     if (!token) {
       return;
     }
+
+    setResult("Matching candidate to job...");
+    setPendingAction("match");
 
     try {
       const data = await apiPost(
@@ -85,6 +95,8 @@ export default function JobsPage() {
       showResult(data, "job_match");
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "Job match failed.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -94,6 +106,9 @@ export default function JobsPage() {
     if (!token || !lastResultText) {
       return;
     }
+
+    setResult("Saving result...");
+    setPendingAction("save");
 
     try {
       const data = await apiPost(
@@ -111,6 +126,8 @@ export default function JobsPage() {
       setResult(JSON.stringify(data, null, 2));
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "Could not save result.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -134,9 +151,14 @@ export default function JobsPage() {
           onChange={(e) => setLocation(e.target.value)}
         />
 
-        <button onClick={searchJobs} className="bg-blue-600 px-5 py-3 rounded">
+        <ActionButton
+          onClick={searchJobs}
+          pending={pendingAction === "search"}
+          pendingLabel="Searching..."
+          className="bg-blue-600 px-5 py-3 rounded"
+        >
           Search Jobs
-        </button>
+        </ActionButton>
 
         <textarea
           className="w-full p-3 rounded bg-slate-800 border border-slate-700 min-h-44"
@@ -152,14 +174,24 @@ export default function JobsPage() {
           onChange={(e) => setJobDescription(e.target.value)}
         />
 
-        <button onClick={matchJob} className="bg-green-600 px-5 py-3 rounded">
+        <ActionButton
+          onClick={matchJob}
+          pending={pendingAction === "match"}
+          pendingLabel="Matching..."
+          className="bg-green-600 px-5 py-3 rounded"
+        >
           Match Candidate To Job
-        </button>
+        </ActionButton>
 
         {lastResultText && (
-          <button onClick={saveResult} className="bg-slate-700 px-5 py-3 rounded">
+          <ActionButton
+            onClick={saveResult}
+            pending={pendingAction === "save"}
+            pendingLabel="Saving..."
+            className="bg-slate-700 px-5 py-3 rounded"
+          >
             Save Result
-          </button>
+          </ActionButton>
         )}
 
         {result && <ResultPanel result={result} />}

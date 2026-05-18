@@ -5,6 +5,7 @@ import { apiPost, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
 import ResultPanel from "@/components/ResultPanel";
+import ActionButton from "@/components/ActionButton";
 
 export default function CvPage() {
   const router = useRouter();
@@ -14,6 +15,9 @@ export default function CvPage() {
   const [result, setResult] = useState("");
   const [lastFeatureType, setLastFeatureType] = useState("");
   const [lastResultText, setLastResultText] = useState("");
+  const [pendingAction, setPendingAction] = useState<
+    "analyze" | "generate" | "generateFromAnalysis" | "save" | null
+  >(null);
 
   function getToken() {
     return localStorage.getItem("token") || "";
@@ -45,6 +49,9 @@ export default function CvPage() {
       return;
     }
 
+    setResult("Analyzing your CV...");
+    setPendingAction("analyze");
+
     try {
       const data = await apiPost(
         endpoints.analyzeCv,
@@ -58,6 +65,8 @@ export default function CvPage() {
       showResult(data, "cv_analysis");
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "CV analysis failed.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -67,6 +76,9 @@ export default function CvPage() {
     if (!token) {
       return;
     }
+
+    setResult("Generating your improved CV...");
+    setPendingAction("generate");
 
     try {
       const data = await apiPost(
@@ -81,6 +93,8 @@ export default function CvPage() {
       showResult(data, "cv_generation");
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "CV generation failed.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -96,6 +110,9 @@ export default function CvPage() {
       return;
     }
 
+    setResult("Generating from your CV analysis...");
+    setPendingAction("generateFromAnalysis");
+
     try {
       const data = await apiPost(
         endpoints.generateCvFromAnalysis,
@@ -110,6 +127,8 @@ export default function CvPage() {
       showResult(data, "cv_from_analysis");
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "CV generation from analysis failed.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -119,6 +138,9 @@ export default function CvPage() {
     if (!token || !lastResultText) {
       return;
     }
+
+    setResult("Saving result...");
+    setPendingAction("save");
 
     try {
       const data = await apiPost(
@@ -135,6 +157,8 @@ export default function CvPage() {
       setResult(JSON.stringify(data, null, 2));
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "Could not save result.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -159,23 +183,43 @@ export default function CvPage() {
         />
 
         <div className="flex gap-3">
-          <button onClick={analyzeCv} className="bg-blue-600 px-5 py-3 rounded">
+          <ActionButton
+            onClick={analyzeCv}
+            pending={pendingAction === "analyze"}
+            pendingLabel="Analyzing..."
+            className="bg-blue-600 px-5 py-3 rounded"
+          >
             Analyze CV
-          </button>
+          </ActionButton>
 
-          <button onClick={generateCv} className="bg-purple-600 px-5 py-3 rounded">
+          <ActionButton
+            onClick={generateCv}
+            pending={pendingAction === "generate"}
+            pendingLabel="Generating..."
+            className="bg-purple-600 px-5 py-3 rounded"
+          >
             Generate Improved CV
-          </button>
+          </ActionButton>
 
-          <button onClick={generateCvFromAnalysis} className="bg-green-600 px-5 py-3 rounded">
+          <ActionButton
+            onClick={generateCvFromAnalysis}
+            pending={pendingAction === "generateFromAnalysis"}
+            pendingLabel="Generating..."
+            className="bg-green-600 px-5 py-3 rounded"
+          >
             Generate From Analysis
-          </button>
+          </ActionButton>
         </div>
 
         {lastResultText && (
-          <button onClick={saveResult} className="bg-slate-700 px-5 py-3 rounded">
+          <ActionButton
+            onClick={saveResult}
+            pending={pendingAction === "save"}
+            pendingLabel="Saving..."
+            className="bg-slate-700 px-5 py-3 rounded"
+          >
             Save Result
-          </button>
+          </ActionButton>
         )}
 
         {result && <ResultPanel result={result} />}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { apiPost, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ActionButton from "@/components/ActionButton";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -11,9 +12,11 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [isRegistering, setIsRegistering] = useState(false);
 
   async function register() {
     setMessage("");
+    setIsRegistering(true);
 
     try {
       const data = await apiPost(endpoints.register, { email, password });
@@ -29,6 +32,8 @@ export default function RegisterPage() {
       router.push("/dashboard");
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : "Registration failed.");
+    } finally {
+      setIsRegistering(false);
     }
   }
 
@@ -52,12 +57,14 @@ export default function RegisterPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button
+        <ActionButton
           onClick={register}
+          pending={isRegistering}
+          pendingLabel="Creating account..."
           className="w-full bg-green-600 py-3 rounded font-semibold"
         >
           Register
-        </button>
+        </ActionButton>
 
         {message && <p className="text-slate-300">{message}</p>}
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { apiPost, endpoints } from "@/lib/api";
 import Link from "next/link";
+import ActionButton from "@/components/ActionButton";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -10,9 +11,11 @@ export default function ForgotPasswordPage() {
   const [newPassword, setNewPassword] = useState("");
   const [message, setMessage] = useState("");
   const [codeRequested, setCodeRequested] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"code" | "reset" | null>(null);
 
   async function requestCode() {
     setMessage("");
+    setPendingAction("code");
 
     try {
       const data = await apiPost(endpoints.forgotPassword, { email });
@@ -20,11 +23,14 @@ export default function ForgotPasswordPage() {
       setMessage(data.message || "If the email exists, a reset code has been sent.");
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : "Could not request reset code.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
   async function resetPassword() {
     setMessage("");
+    setPendingAction("reset");
 
     try {
       const data = await apiPost(endpoints.resetPassword, {
@@ -35,6 +41,8 @@ export default function ForgotPasswordPage() {
       setMessage(data.message || "Password reset successfully.");
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : "Could not reset password.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -50,12 +58,14 @@ export default function ForgotPasswordPage() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
-        <button
+        <ActionButton
           onClick={requestCode}
+          pending={pendingAction === "code"}
+          pendingLabel="Sending..."
           className="w-full bg-blue-600 py-3 rounded font-semibold"
         >
           Send Reset Code
-        </button>
+        </ActionButton>
 
         {codeRequested && (
           <>
@@ -74,12 +84,14 @@ export default function ForgotPasswordPage() {
               onChange={(e) => setNewPassword(e.target.value)}
             />
 
-            <button
+            <ActionButton
               onClick={resetPassword}
+              pending={pendingAction === "reset"}
+              pendingLabel="Resetting..."
               className="w-full bg-green-600 py-3 rounded font-semibold"
             >
               Reset Password
-            </button>
+            </ActionButton>
           </>
         )}
 

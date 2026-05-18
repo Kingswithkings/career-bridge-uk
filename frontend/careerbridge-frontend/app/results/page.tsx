@@ -5,11 +5,13 @@ import { apiGet, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
 import ResultPanel from "@/components/ResultPanel";
+import ActionButton from "@/components/ActionButton";
 
 export default function ResultsPage() {
   const router = useRouter();
 
   const [result, setResult] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   function getToken() {
     return localStorage.getItem("token") || "";
@@ -25,10 +27,14 @@ export default function ResultsPage() {
     }
 
     try {
+      setResult("Loading saved results...");
+      setIsLoading(true);
       const data = await apiGet(endpoints.getResults, token);
       setResult(JSON.stringify(data, null, 2));
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "Could not load saved results.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -38,9 +44,14 @@ export default function ResultsPage() {
       <div className="max-w-5xl mx-auto space-y-6">
         <h1 className="text-4xl font-bold">Saved Results</h1>
 
-        <button onClick={getResults} className="bg-blue-600 px-5 py-3 rounded">
+        <ActionButton
+          onClick={getResults}
+          pending={isLoading}
+          pendingLabel="Loading..."
+          className="bg-blue-600 px-5 py-3 rounded"
+        >
           Load Saved Results
-        </button>
+        </ActionButton>
 
         {result && <ResultPanel result={result} />}
       </div>

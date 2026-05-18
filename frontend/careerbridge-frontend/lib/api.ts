@@ -1,5 +1,6 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://career-bridge-uk.onrender.com";
+const REQUEST_TIMEOUT_MS = 15000;
 
 type ApiErrorResponse = {
   detail?: string;
@@ -26,16 +27,26 @@ function parseErrorMessage(result: unknown, status: number) {
 }
 
 export async function apiPost(path: string, data: unknown, token?: string): Promise<ApiResponse> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
+    signal: controller.signal,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(data),
-  }).catch(() => {
-    throw new Error("Could not reach the API. Check the backend URL and CORS settings.");
-  });
+  })
+    .catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error("The API took too long to respond. Please try again.");
+      }
+
+      throw new Error("Could not reach the API. Check the backend URL and CORS settings.");
+    })
+    .finally(() => window.clearTimeout(timeoutId));
 
   const text = await res.text();
 
@@ -55,13 +66,23 @@ export async function apiPost(path: string, data: unknown, token?: string): Prom
 }
 
 export async function apiGet(path: string, token?: string): Promise<ApiResponse> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
+    signal: controller.signal,
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-  }).catch(() => {
-    throw new Error("Could not reach the API. Check the backend URL and CORS settings.");
-  });
+  })
+    .catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error("The API took too long to respond. Please try again.");
+      }
+
+      throw new Error("Could not reach the API. Check the backend URL and CORS settings.");
+    })
+    .finally(() => window.clearTimeout(timeoutId));
 
   const text = await res.text();
 

@@ -5,6 +5,7 @@ import { apiPost, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
 import ResultPanel from "@/components/ResultPanel";
+import ActionButton from "@/components/ActionButton";
 
 type InterviewMessage = {
   role: "candidate" | "interviewer";
@@ -22,6 +23,7 @@ export default function InterviewPage() {
   const [lastResultText, setLastResultText] = useState("");
   const [messages, setMessages] = useState<InterviewMessage[]>([]);
   const [candidateAnswer, setCandidateAnswer] = useState("");
+  const [pendingAction, setPendingAction] = useState<"prepare" | "mock" | "save" | null>(null);
 
   function getToken() {
     return localStorage.getItem("token") || "";
@@ -53,6 +55,9 @@ export default function InterviewPage() {
       return;
     }
 
+    setResult("Preparing interview guidance...");
+    setPendingAction("prepare");
+
     try {
       const data = await apiPost(
         endpoints.prepareInterview,
@@ -67,6 +72,8 @@ export default function InterviewPage() {
       showResult(data, "interview_preparation");
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "Interview preparation failed.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -92,6 +99,8 @@ export default function InterviewPage() {
       : messages;
 
     setCandidateAnswer("");
+    setResult("Getting interviewer response...");
+    setPendingAction("mock");
 
     try {
       const data = await apiPost(
@@ -119,8 +128,11 @@ export default function InterviewPage() {
 
       setMessages(nextMessages);
       saveConversation(nextMessages);
+      setResult("");
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "Mock interview failed.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -130,6 +142,9 @@ export default function InterviewPage() {
     if (!token || !lastResultText) {
       return;
     }
+
+    setResult("Saving result...");
+    setPendingAction("save");
 
     try {
       const data = await apiPost(
@@ -146,6 +161,8 @@ export default function InterviewPage() {
       setResult(JSON.stringify(data, null, 2));
     } catch (err: unknown) {
       setResult(err instanceof Error ? err.message : "Could not save result.");
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -177,13 +194,23 @@ export default function InterviewPage() {
         />
 
         <div className="flex gap-3">
-          <button onClick={prepareInterview} className="bg-blue-600 px-5 py-3 rounded">
+          <ActionButton
+            onClick={prepareInterview}
+            pending={pendingAction === "prepare"}
+            pendingLabel="Preparing..."
+            className="bg-blue-600 px-5 py-3 rounded"
+          >
             Prepare Interview
-          </button>
+          </ActionButton>
 
-          <button onClick={mockInterview} className="bg-purple-600 px-5 py-3 rounded">
+          <ActionButton
+            onClick={mockInterview}
+            pending={pendingAction === "mock"}
+            pendingLabel="Starting..."
+            className="bg-purple-600 px-5 py-3 rounded"
+          >
             Start Mock Interview
-          </button>
+          </ActionButton>
         </div>
 
         {messages.length > 0 && (
@@ -212,15 +239,25 @@ export default function InterviewPage() {
             onChange={(e) => setCandidateAnswer(e.target.value)}
           />
 
-          <button onClick={mockInterview} className="bg-green-600 px-5 py-3 rounded">
+          <ActionButton
+            onClick={mockInterview}
+            pending={pendingAction === "mock"}
+            pendingLabel="Sending..."
+            className="bg-green-600 px-5 py-3 rounded"
+          >
             Send Answer
-          </button>
+          </ActionButton>
         </div>
 
         {lastResultText && (
-          <button onClick={saveResult} className="bg-slate-700 px-5 py-3 rounded">
+          <ActionButton
+            onClick={saveResult}
+            pending={pendingAction === "save"}
+            pendingLabel="Saving..."
+            className="bg-slate-700 px-5 py-3 rounded"
+          >
             Save Result
-          </button>
+          </ActionButton>
         )}
 
         {result && <ResultPanel result={result} />}

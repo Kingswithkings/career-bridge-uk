@@ -4,6 +4,7 @@ import { useState } from "react";
 import { apiPost, endpoints } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ActionButton from "@/components/ActionButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,9 +12,11 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   async function login() {
     setMessage("");
+    setIsLoggingIn(true);
 
     try {
       const data = await apiPost(endpoints.login, { email, password });
@@ -29,6 +32,8 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : "Invalid email or password.");
+    } finally {
+      setIsLoggingIn(false);
     }
   }
 
@@ -52,12 +57,14 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button
+        <ActionButton
           onClick={login}
+          pending={isLoggingIn}
+          pendingLabel="Logging in..."
           className="w-full bg-blue-600 py-3 rounded font-semibold"
         >
           Login
-        </button>
+        </ActionButton>
 
         {message && <p className="text-red-400">{message}</p>}
 
