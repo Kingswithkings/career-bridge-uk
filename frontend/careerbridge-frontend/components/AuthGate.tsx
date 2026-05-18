@@ -31,7 +31,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+    let timeoutId: number | null = null;
 
     function logout() {
       localStorage.removeItem("token");

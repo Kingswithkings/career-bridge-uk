@@ -59,30 +59,101 @@ const jobRoleOptions = [
   "Web Developer",
 ];
 
-const fallbackCountryOptions = [
+const countryOptions = [
+  "Afghanistan",
+  "Albania",
+  "Algeria",
+  "Andorra",
+  "Angola",
+  "Argentina",
+  "Armenia",
   "Australia",
+  "Austria",
+  "Azerbaijan",
+  "Bahamas",
+  "Bahrain",
+  "Bangladesh",
+  "Belgium",
+  "Belize",
+  "Benin",
+  "Bolivia",
+  "Bosnia and Herzegovina",
+  "Botswana",
+  "Brazil",
+  "Bulgaria",
+  "Cambodia",
+  "Cameroon",
   "Canada",
+  "Chile",
+  "China",
+  "Colombia",
+  "Costa Rica",
+  "Croatia",
+  "Cyprus",
+  "Czechia",
   "Denmark",
+  "Egypt",
+  "Estonia",
+  "Ethiopia",
   "Finland",
   "France",
   "Germany",
   "Ghana",
+  "Greece",
+  "Hong Kong",
+  "Hungary",
+  "Iceland",
   "India",
+  "Indonesia",
   "Ireland",
+  "Israel",
   "Italy",
+  "Japan",
+  "Jordan",
+  "Kenya",
+  "Kuwait",
+  "Latvia",
+  "Lebanon",
+  "Lithuania",
+  "Luxembourg",
+  "Malaysia",
+  "Malta",
+  "Mexico",
+  "Morocco",
   "Netherlands",
+  "New Zealand",
   "Nigeria",
   "Norway",
+  "Pakistan",
+  "Philippines",
   "Poland",
   "Portugal",
+  "Qatar",
+  "Romania",
+  "Rwanda",
+  "Saudi Arabia",
+  "Serbia",
   "Singapore",
+  "Slovakia",
+  "Slovenia",
   "South Africa",
+  "South Korea",
   "Spain",
   "Sweden",
   "Switzerland",
+  "Taiwan",
+  "Tanzania",
+  "Thailand",
+  "Tunisia",
+  "Turkey",
+  "Uganda",
+  "Ukraine",
   "United Arab Emirates",
   "United Kingdom",
   "United States",
+  "Vietnam",
+  "Zambia",
+  "Zimbabwe",
 ];
 
 const majorCityOptions = [
@@ -147,20 +218,9 @@ const majorCityOptions = [
   "Accra, Ghana",
 ];
 
-function getCountryOptions() {
-  if (typeof Intl.supportedValuesOf !== "function") {
-    return fallbackCountryOptions;
-  }
-
-  const displayNames = new Intl.DisplayNames(["en"], { type: "region" });
-
-  return Intl.supportedValuesOf("region")
-    .map((regionCode) => displayNames.of(regionCode))
-    .filter((countryName): countryName is string => Boolean(countryName))
-    .sort((countryA, countryB) => countryA.localeCompare(countryB));
-}
-
-const locationOptions = Array.from(new Set([...getCountryOptions(), ...majorCityOptions]));
+const locationOptions = Array.from(new Set([...countryOptions, ...majorCityOptions])).sort(
+  (locationA, locationB) => locationA.localeCompare(locationB)
+);
 
 export default function JobsPage() {
   const router = useRouter();
