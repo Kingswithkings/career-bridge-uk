@@ -59,6 +59,110 @@ const jobRoleOptions = [
   "Web Developer",
 ];
 
+const ukJobRoleOptions = [
+  "Accounts Assistant",
+  "Accounts Payable Clerk",
+  "Accounts Receivable Clerk",
+  "Actuary",
+  "Adult Social Worker",
+  "Advertising Account Executive",
+  "Aerospace Engineer",
+  "Agricultural Engineer",
+  "Architect",
+  "Architectural Technologist",
+  "Audit Associate",
+  "Audit Manager",
+  "Automotive Technician",
+  "Barrister",
+  "Bid Manager",
+  "Biomedical Scientist",
+  "Bookkeeper",
+  "Branch Manager",
+  "Building Surveyor",
+  "Bus Driver",
+  "Business Development Manager",
+  "Buyer",
+  "Carer",
+  "Carpenter",
+  "Case Worker",
+  "Chef",
+  "Children's Social Worker",
+  "Clinical Psychologist",
+  "Compliance Analyst",
+  "Compliance Manager",
+  "Construction Manager",
+  "Copywriter",
+  "Credit Controller",
+  "Data Protection Officer",
+  "Database Administrator",
+  "Dental Nurse",
+  "Dentist",
+  "Design Engineer",
+  "Digital Project Manager",
+  "Early Years Practitioner",
+  "Education Support Worker",
+  "Electrical Engineer",
+  "Employment Advisor",
+  "Estimator",
+  "Facilities Manager",
+  "Financial Adviser",
+  "Financial Controller",
+  "Fire Safety Officer",
+  "Forklift Driver",
+  "Graduate Trainee",
+  "Health and Safety Advisor",
+  "Helpdesk Analyst",
+  "Housing Officer",
+  "Immigration Advisor",
+  "Insurance Broker",
+  "Lab Technician",
+  "Learning Support Assistant",
+  "Legal Assistant",
+  "Legal Secretary",
+  "Management Accountant",
+  "Manufacturing Engineer",
+  "Marketing Manager",
+  "Mental Health Nurse",
+  "Midwife",
+  "Network Engineer",
+  "Occupational Therapist",
+  "Office Manager",
+  "Paralegal",
+  "Payroll Administrator",
+  "Personal Assistant",
+  "Physiotherapist",
+  "Planning Officer",
+  "Plumber",
+  "Police Officer",
+  "Procurement Manager",
+  "Quantity Surveyor",
+  "Radiographer",
+  "Receptionist",
+  "Registered Manager",
+  "Retail Assistant",
+  "Retail Manager",
+  "Risk Analyst",
+  "School Administrator",
+  "Secondary School Teacher",
+  "Site Manager",
+  "Solicitor",
+  "Support Worker",
+  "Systems Analyst",
+  "Teaching Assistant",
+  "Technical Architect",
+  "Technical Support Engineer",
+  "Town Planner",
+  "Train Driver",
+  "Transport Planner",
+  "Vehicle Technician",
+  "Veterinary Nurse",
+  "Welder",
+];
+
+const roleOptions = Array.from(new Set([...jobRoleOptions, ...ukJobRoleOptions])).sort(
+  (roleA, roleB) => roleA.localeCompare(roleB)
+);
+
 const countryOptions = [
   "Afghanistan",
   "Albania",
@@ -157,6 +261,8 @@ const countryOptions = [
 ];
 
 const majorCityOptions = [
+  "Remote, United Kingdom",
+  "Hybrid, United Kingdom",
   "London, United Kingdom",
   "Manchester, United Kingdom",
   "Birmingham, United Kingdom",
@@ -168,6 +274,41 @@ const majorCityOptions = [
   "Sheffield, United Kingdom",
   "Cardiff, United Kingdom",
   "Belfast, United Kingdom",
+  "Aberdeen, United Kingdom",
+  "Bath, United Kingdom",
+  "Blackpool, United Kingdom",
+  "Bolton, United Kingdom",
+  "Bournemouth, United Kingdom",
+  "Bradford, United Kingdom",
+  "Brighton, United Kingdom",
+  "Cambridge, United Kingdom",
+  "Canterbury, United Kingdom",
+  "Chelmsford, United Kingdom",
+  "Coventry, United Kingdom",
+  "Derby, United Kingdom",
+  "Dundee, United Kingdom",
+  "Exeter, United Kingdom",
+  "Hull, United Kingdom",
+  "Inverness, United Kingdom",
+  "Leicester, United Kingdom",
+  "Luton, United Kingdom",
+  "Milton Keynes, United Kingdom",
+  "Newcastle upon Tyne, United Kingdom",
+  "Norwich, United Kingdom",
+  "Nottingham, United Kingdom",
+  "Oxford, United Kingdom",
+  "Peterborough, United Kingdom",
+  "Plymouth, United Kingdom",
+  "Portsmouth, United Kingdom",
+  "Preston, United Kingdom",
+  "Reading, United Kingdom",
+  "Southampton, United Kingdom",
+  "Stoke-on-Trent, United Kingdom",
+  "Sunderland, United Kingdom",
+  "Swansea, United Kingdom",
+  "Wakefield, United Kingdom",
+  "Wolverhampton, United Kingdom",
+  "York, United Kingdom",
   "New York, United States",
   "San Francisco, United States",
   "Los Angeles, United States",
@@ -226,7 +367,7 @@ export default function JobsPage() {
   const router = useRouter();
 
   const [role, setRole] = useState("");
-  const [location, setLocation] = useState("United Kingdom");
+  const [location, setLocation] = useState("");
   const [cvText, setCvText] = useState("");
   const [cvFileName, setCvFileName] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -383,12 +524,12 @@ export default function JobsPage() {
         <input
           className="w-full p-3 rounded bg-slate-800 border border-slate-700"
           list="job-role-options"
-          placeholder="Role e.g. AI Engineer"
+          placeholder="Job role e.g. Software Engineer"
           value={role}
           onChange={(e) => setRole(e.target.value)}
         />
         <datalist id="job-role-options">
-          {jobRoleOptions.map((option) => (
+          {roleOptions.map((option) => (
             <option key={option} value={option} />
           ))}
         </datalist>
@@ -396,7 +537,7 @@ export default function JobsPage() {
         <input
           className="w-full p-3 rounded bg-slate-800 border border-slate-700"
           list="job-location-options"
-          placeholder="Location"
+          placeholder="Location / city e.g. London, Manchester, Remote"
           value={location}
           onChange={(e) => setLocation(e.target.value)}
         />
