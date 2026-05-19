@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from importlib import import_module
 
 from fastapi import FastAPI, Request
@@ -17,6 +18,7 @@ from .api.routes.job_routes import router as job_router
 from .api.routes.result_routes import router as result_router
 from .database import Base, engine
 from .limiter import limiter
+from .posthog_client import posthog_client
 
 import_module(f"{__package__}.models.result_model")
 import_module(f"{__package__}.models.user_model")
@@ -86,10 +88,18 @@ def ensure_user_verification_columns() -> None:
 
 ensure_user_verification_columns()
 
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    posthog_client.flush()
+
+
 app = FastAPI(
     title="CareerBridge UK API",
     description="AI-powered career mentor for UK job seekers.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.state.limiter = limiter

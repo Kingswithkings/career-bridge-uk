@@ -5,6 +5,7 @@ from fastapi import Depends
 from pydantic import ValidationError
 
 from ...api.dependencies import get_current_user
+from ...posthog_client import posthog_client
 from ...services.interview_service import prepare_interview, run_mock_interview
 
 
@@ -42,6 +43,15 @@ async def prepare_candidate_interview(
             location=request.location,
             experience_level=request.experience_level,
             interview_style=request.interview_style,
+        )
+        posthog_client.capture(
+            distinct_id=_current_user.email,
+            event="interview_prepared",
+            properties={
+                "target_role": request.target_role,
+                "experience_level": request.experience_level,
+                "interview_style": request.interview_style,
+            },
         )
         return InterviewPreparationResponse(preparation=result)
     except asyncio.TimeoutError as exc:
@@ -106,6 +116,16 @@ async def mock_interview(
             interview_style=request.interview_style,
         )
 
+        posthog_client.capture(
+            distinct_id=_current_user.email,
+            event="mock_interview_completed",
+            properties={
+                "target_role": request.target_role,
+                "experience_level": request.experience_level,
+                "interview_style": request.interview_style,
+                "message_count": len(request.messages),
+            },
+        )
         return MockInterviewResponse(reply=result)
 
     except ValidationError as exc:

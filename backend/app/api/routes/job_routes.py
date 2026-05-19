@@ -3,6 +3,7 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 
 from ...api.dependencies import get_current_user
+from ...posthog_client import posthog_client
 from ...services.job_match_service import match_job
 from ...services.job_search_service import search_live_jobs
 from ...schemas.job_search_schema import JobSearchRequest, JobSearchResponse
@@ -29,6 +30,14 @@ async def match_candidate_to_job(
             location=request.location,
             experience_level=request.experience_level,
         )
+        posthog_client.capture(
+            distinct_id=_current_user.email,
+            event="job_matched",
+            properties={
+                "target_role": request.target_role,
+                "experience_level": request.experience_level,
+            },
+        )
         return JobMatchResponse(match_result=result)
     except asyncio.TimeoutError as exc:
         raise HTTPException(
@@ -45,12 +54,21 @@ def search_jobs(
     _current_user=Depends(get_current_user),
 ):
     try:
-        return search_live_jobs(
+        result = search_live_jobs(
             query=request.query,
             location=request.location,
             page=request.page,
             results_per_page=request.results_per_page,
         )
+        posthog_client.capture(
+            distinct_id=_current_user.email,
+            event="jobs_searched",
+            properties={
+                "results_per_page": request.results_per_page,
+                "page": request.page,
+            },
+        )
+        return result
 
     except HTTPException:
         raise

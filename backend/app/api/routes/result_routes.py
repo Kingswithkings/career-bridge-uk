@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from ...api.dependencies import get_current_user
 from ...database import get_db
+from ...posthog_client import posthog_client
 from ...models.result_model import SavedResult
 from ...schemas.result_schema import (
     SaveResultRequest,
@@ -32,6 +33,11 @@ def save_result(
     db.commit()
     db.refresh(saved)
 
+    posthog_client.capture(
+        distinct_id=current_user.email,
+        event="result_saved",
+        properties={"feature_type": request.feature_type},
+    )
     return SaveResultResponse(
         id=saved.id,
         message="Result saved successfully",

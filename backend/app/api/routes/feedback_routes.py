@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from ...api.dependencies import get_current_user
 from ...database import get_db
+from ...posthog_client import posthog_client
 from ...models.feedback_model import Feedback
 from ...schemas.feedback_schema import FeedbackItem, FeedbackRequest, FeedbackResponse
 
@@ -31,6 +32,18 @@ def submit_feedback(
     db.commit()
     db.refresh(feedback)
 
+    posthog_client.capture(
+        distinct_id=current_user.email,
+        event="feedback_submitted",
+        properties={
+            "rating": request.rating,
+            "page": request.page,
+            "cv_analysis_helpful": request.cv_analysis_helpful,
+            "interview_preparation_useful": request.interview_preparation_useful,
+            "job_matching_accurate": request.job_matching_accurate,
+            "would_use_again": request.would_use_again,
+        },
+    )
     return FeedbackResponse(id=feedback.id, message="Feedback submitted successfully")
 
 

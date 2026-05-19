@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
 from ...api.dependencies import get_current_user
 from ...limiter import limiter
+from ...posthog_client import posthog_client
 from ...services.cv_service import (
     analyze_cv,
     generate_improved_cv_from_analysis,
@@ -39,6 +40,11 @@ async def upload_candidate_cv(
     _current_user=Depends(get_current_user),
 ):
     text = await extract_cv_text(file)
+    posthog_client.capture(
+        distinct_id=_current_user.email,
+        event="cv_uploaded",
+        properties={"file_type": file.content_type},
+    )
     return {"filename": file.filename, "cv_text": text}
 
 
@@ -57,6 +63,15 @@ async def analyze_candidate_cv(
             location=payload.location,
             experience_level=payload.experience_level,
             visa_status=payload.visa_status,
+        )
+        posthog_client.capture(
+            distinct_id=_current_user.email,
+            event="cv_analyzed",
+            properties={
+                "target_role": payload.target_role,
+                "experience_level": payload.experience_level,
+                "has_visa_status": bool(payload.visa_status),
+            },
         )
         return CVAnalysisResponse(analysis=result)
     except asyncio.TimeoutError as exc:
@@ -81,6 +96,14 @@ async def generate_candidate_cv(
             location=request.location,
             experience_level=request.experience_level,
         )
+        posthog_client.capture(
+            distinct_id=_current_user.email,
+            event="cv_generated",
+            properties={
+                "target_role": request.target_role,
+                "experience_level": request.experience_level,
+            },
+        )
         return CVGenerateResponse(generated_cv=result)
     except asyncio.TimeoutError as exc:
         raise HTTPException(
@@ -104,6 +127,14 @@ async def generate_candidate_cv_from_analysis(
             target_role=request.target_role,
             location=request.location,
             experience_level=request.experience_level,
+        )
+        posthog_client.capture(
+            distinct_id=_current_user.email,
+            event="cv_improved",
+            properties={
+                "target_role": request.target_role,
+                "experience_level": request.experience_level,
+            },
         )
         return ImprovedCVResponse(improved_cv=result)
     except asyncio.TimeoutError as exc:

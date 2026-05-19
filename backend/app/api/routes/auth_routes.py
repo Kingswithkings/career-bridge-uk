@@ -2,6 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 
 from ...database import get_db
+from ...posthog_client import posthog_client
 from ...schemas.auth_schema import (
     AuthResponse,
     ForgotPasswordRequest,
@@ -41,16 +42,21 @@ def register(
         response["email"],
         request.full_name,
     )
+    distinct_id = response["email"]
+    posthog_client.set(distinct_id=distinct_id, properties={"has_full_name": bool(request.full_name)})
+    posthog_client.capture(distinct_id=distinct_id, event="user_registered", properties={"signup_method": "form"})
     return response
 
 
 @router.post("/login", response_model=AuthResponse)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
-    return login_user(
+    response = login_user(
         db=db,
         email=request.email,
         password=request.password,
     )
+    posthog_client.capture(distinct_id=response["email"], event="user_logged_in")
+    return response
 
 
 @router.post("/forgot-password", response_model=MessageResponse)
@@ -68,6 +74,7 @@ def forgot_password(
             reset_details["code"],
             reset_details["full_name"],
         )
+        posthog_client.capture(distinct_id=reset_details["email"], event="password_reset_requested")
 
     return {
         "message": "If an account exists for this email, a password reset code has been sent.",
@@ -76,9 +83,11 @@ def forgot_password(
 
 @router.post("/reset-password", response_model=MessageResponse)
 def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
-    return reset_user_password(
+    result = reset_user_password(
         db=db,
         email=request.email,
         code=request.code,
         new_password=request.new_password,
     )
+    posthog_client.capture(distinct_id=request.email, event="password_reset_completed")
+    return result
