@@ -1,7 +1,20 @@
 from .ai_service import ask_ai
 
+MAX_CV_CHARACTERS = 12000
+MAX_ANALYSIS_CHARACTERS = 8000
 
-def analyze_cv(
+
+def _trim_text(text: str, max_characters: int) -> str:
+    if len(text) <= max_characters:
+        return text
+
+    return (
+        text[:max_characters]
+        + "\n\n[CV text was shortened to keep the AI request within response time limits.]"
+    )
+
+
+async def analyze_cv(
     cv_text: str,
     target_role: str,
     location: str | None = None,
@@ -13,7 +26,7 @@ def analyze_cv(
     You help international students, migrants, graduates, and job seekers improve
     their CVs for UK employment.
 
-    Your analysis must be practical, role-specific, and honest.
+    Your analysis must be practical, role-specific, honest, and concise.
 
     Do not give immigration legal advice.
     If visa or work status is mentioned, only give general career guidance and advise
@@ -29,7 +42,7 @@ def analyze_cv(
     Visa/work situation: {visa_status}
 
     CV:
-    {cv_text}
+    {_trim_text(cv_text, MAX_CV_CHARACTERS)}
 
     Provide the response in this structure:
 
@@ -54,10 +67,10 @@ def analyze_cv(
     10. Action Plan Before Applying
     """
 
-    return ask_ai(system_prompt, user_prompt)
+    return await ask_ai(system_prompt, user_prompt)
 
 
-def generate_uk_cv(
+async def generate_uk_cv(
     cv_text: str,
     target_role: str,
     location: str | None = None,
@@ -80,7 +93,7 @@ def generate_uk_cv(
     Experience level: {experience_level}
 
     Original CV:
-    {cv_text}
+    {_trim_text(cv_text, MAX_CV_CHARACTERS)}
 
     Output the CV in this structure:
 
@@ -102,10 +115,10 @@ def generate_uk_cv(
     INFORMATION TO ADD
     """
 
-    return ask_ai(system_prompt, user_prompt)
+    return await ask_ai(system_prompt, user_prompt)
 
 
-def generate_improved_cv_from_analysis(
+async def generate_improved_cv_from_analysis(
     cv_text: str,
     cv_analysis: str,
     target_role: str,
@@ -128,10 +141,10 @@ def generate_improved_cv_from_analysis(
     Experience level: {experience_level}
 
     Original CV:
-    {cv_text}
+    {_trim_text(cv_text, MAX_CV_CHARACTERS)}
 
     CV Analysis:
-    {cv_analysis}
+    {_trim_text(cv_analysis, MAX_ANALYSIS_CHARACTERS)}
 
     Output a complete UK CV in this structure:
 
@@ -157,4 +170,4 @@ def generate_improved_cv_from_analysis(
     INFORMATION TO ADD
     """
 
-    return ask_ai(system_prompt, user_prompt)
+    return await ask_ai(system_prompt, user_prompt)

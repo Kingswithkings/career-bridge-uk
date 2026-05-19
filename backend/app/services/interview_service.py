@@ -1,7 +1,21 @@
 from .ai_service import ask_ai
 
+MAX_CV_CHARACTERS = 12000
+MAX_JOB_DESCRIPTION_CHARACTERS = 8000
+MAX_CONVERSATION_CHARACTERS = 6000
 
-def prepare_interview(
+
+def _trim_text(text: str, max_characters: int) -> str:
+    if len(text) <= max_characters:
+        return text
+
+    return (
+        text[:max_characters]
+        + "\n\n[Text was shortened to keep the AI request within response time limits.]"
+    )
+
+
+async def prepare_interview(
     cv_text: str,
     target_role: str,
     job_description: str | None = None,
@@ -31,10 +45,10 @@ def prepare_interview(
     Interview style: {interview_style}
 
     Candidate CV:
-    {cv_text}
+    {_trim_text(cv_text, MAX_CV_CHARACTERS)}
 
     Job description:
-    {job_description if job_description else "No job description provided."}
+    {_trim_text(job_description, MAX_JOB_DESCRIPTION_CHARACTERS) if job_description else "No job description provided."}
 
     Produce:
 
@@ -57,10 +71,10 @@ def prepare_interview(
     9. Final Interview Preparation Checklist
     """
 
-    return ask_ai(system_prompt, user_prompt)
+    return await ask_ai(system_prompt, user_prompt)
 
 
-def run_mock_interview(
+async def run_mock_interview(
     cv_text: str,
     target_role: str,
     messages: list,
@@ -93,12 +107,12 @@ def run_mock_interview(
 
     user_prompt = f"""
     Candidate CV:
-    {cv_text}
+    {_trim_text(cv_text, MAX_CV_CHARACTERS)}
 
     Conversation so far:
-    {conversation_text}
+    {_trim_text(conversation_text, MAX_CONVERSATION_CHARACTERS)}
 
     Continue the mock interview.
     """
 
-    return ask_ai(system_prompt, user_prompt)
+    return await ask_ai(system_prompt, user_prompt)

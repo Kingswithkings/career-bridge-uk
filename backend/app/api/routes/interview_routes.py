@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Body, HTTPException
 from fastapi import Depends
 from pydantic import ValidationError
@@ -27,13 +29,13 @@ router = APIRouter(prefix="/api/interview", tags=["Interview"])
 
 
 @router.post("/prepare", response_model=InterviewPreparationResponse)
-def prepare_candidate_interview(
+async def prepare_candidate_interview(
     request: InterviewPreparationRequest,
     _current_user=Depends(get_current_user),
 ):
 
     try:
-        result = prepare_interview(
+        result = await prepare_interview(
             cv_text=request.cv_text,
             target_role=request.target_role,
             job_description=request.job_description,
@@ -42,12 +44,17 @@ def prepare_candidate_interview(
             interview_style=request.interview_style,
         )
         return InterviewPreparationResponse(preparation=result)
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="The AI response took too long. Please try again with a shorter CV or job description.",
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/mock", response_model=MockInterviewResponse)
-def mock_interview(
+async def mock_interview(
     payload: dict = Body(default_factory=dict),
     _current_user=Depends(get_current_user),
 ):
@@ -90,7 +97,7 @@ def mock_interview(
                 detail="cv_text and target_role are required.",
             )
 
-        result = run_mock_interview(
+        result = await run_mock_interview(
             cv_text=request.cv_text,
             target_role=request.target_role,
             messages=request.messages,
@@ -105,5 +112,10 @@ def mock_interview(
         raise HTTPException(status_code=400, detail=exc.errors()) from exc
     except HTTPException:
         raise
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="The AI response took too long. Please try again with a shorter conversation.",
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

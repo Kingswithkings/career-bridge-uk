@@ -1,6 +1,15 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://career-bridge-uk.onrender.com";
 const REQUEST_TIMEOUT_MS = 15000;
+const AI_REQUEST_TIMEOUT_MS = 120000;
+const AI_ENDPOINTS = new Set([
+  "/api/cv/analyze",
+  "/api/cv/generate",
+  "/api/cv/generate-from-analysis",
+  "/api/interview/prepare",
+  "/api/interview/mock",
+  "/api/jobs/match",
+]);
 
 type ApiErrorResponse = {
   detail?: string;
@@ -28,7 +37,9 @@ function parseErrorMessage(result: unknown, status: number) {
 
 export async function apiPost(path: string, data: unknown, token?: string): Promise<ApiResponse> {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const isAiEndpoint = AI_ENDPOINTS.has(path);
+  const timeoutMs = isAiEndpoint ? AI_REQUEST_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   const res = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -41,7 +52,11 @@ export async function apiPost(path: string, data: unknown, token?: string): Prom
   })
     .catch((error: unknown) => {
       if (error instanceof DOMException && error.name === "AbortError") {
-        throw new Error("The API took too long to respond. Please try again.");
+        throw new Error(
+          isAiEndpoint
+            ? "The AI response took too long. Please try again with a shorter CV or job description."
+            : "The API took too long to respond. Please try again.",
+        );
       }
 
       throw new Error("Could not reach the API. Check the backend URL and CORS settings.");

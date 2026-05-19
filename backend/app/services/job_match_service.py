@@ -1,7 +1,20 @@
 from .ai_service import ask_ai
 
+MAX_CV_CHARACTERS = 12000
+MAX_JOB_DESCRIPTION_CHARACTERS = 8000
 
-def match_job(
+
+def _trim_text(text: str, max_characters: int) -> str:
+    if len(text) <= max_characters:
+        return text
+
+    return (
+        text[:max_characters]
+        + "\n\n[Text was shortened to keep the AI request within response time limits.]"
+    )
+
+
+async def match_job(
     cv_text: str,
     target_role: str,
     job_description: str,
@@ -22,10 +35,10 @@ def match_job(
     Experience level: {experience_level}
 
     Candidate CV:
-    {cv_text}
+    {_trim_text(cv_text, MAX_CV_CHARACTERS)}
 
     Job description:
-    {job_description}
+    {_trim_text(job_description, MAX_JOB_DESCRIPTION_CHARACTERS)}
 
     Provide:
 
@@ -40,4 +53,4 @@ def match_job(
     9. Apply / Improve First Recommendation
     """
 
-    return ask_ai(system_prompt, user_prompt)
+    return await ask_ai(system_prompt, user_prompt)

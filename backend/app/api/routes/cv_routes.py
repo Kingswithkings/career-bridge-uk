@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 
 from ...api.dependencies import get_current_user
@@ -42,14 +44,14 @@ async def upload_candidate_cv(
 
 @router.post("/analyze", response_model=CVAnalysisResponse)
 @limiter.limit("5/minute")
-def analyze_candidate_cv(
+async def analyze_candidate_cv(
     request: Request,
     payload: CVAnalysisRequest,
     _current_user=Depends(get_current_user),
 ):
 
     try:
-        result = analyze_cv(
+        result = await analyze_cv(
             cv_text=payload.cv_text,
             target_role=payload.target_role,
             location=payload.location,
@@ -57,36 +59,46 @@ def analyze_candidate_cv(
             visa_status=payload.visa_status,
         )
         return CVAnalysisResponse(analysis=result)
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="The AI response took too long. Please try again with a shorter CV or job target.",
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/generate", response_model=CVGenerateResponse)
-def generate_candidate_cv(
+async def generate_candidate_cv(
     request: CVGenerateRequest,
     _current_user=Depends(get_current_user),
 ):
 
     try:
-        result = generate_uk_cv(
+        result = await generate_uk_cv(
             cv_text=request.cv_text,
             target_role=request.target_role,
             location=request.location,
             experience_level=request.experience_level,
         )
         return CVGenerateResponse(generated_cv=result)
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="The AI response took too long. Please try again with a shorter CV.",
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
 @router.post("/generate-from-analysis", response_model=ImprovedCVResponse)
-def generate_candidate_cv_from_analysis(
+async def generate_candidate_cv_from_analysis(
     request: ImprovedCVRequest,
     _current_user=Depends(get_current_user),
 ):
 
     try:
-        result = generate_improved_cv_from_analysis(
+        result = await generate_improved_cv_from_analysis(
             cv_text=request.cv_text,
             cv_analysis=request.cv_analysis,
             target_role=request.target_role,
@@ -94,5 +106,10 @@ def generate_candidate_cv_from_analysis(
             experience_level=request.experience_level,
         )
         return ImprovedCVResponse(improved_cv=result)
+    except asyncio.TimeoutError as exc:
+        raise HTTPException(
+            status_code=504,
+            detail="The AI response took too long. Please try again with shorter CV analysis.",
+        ) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
