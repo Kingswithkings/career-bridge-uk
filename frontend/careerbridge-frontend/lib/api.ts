@@ -55,7 +55,7 @@ export async function apiPost(path: string, data: unknown, token?: string): Prom
         throw new Error(
           isAiEndpoint
             ? "The AI response took too long. Please try again with a shorter CV or job description."
-            : "The API took too long to respond. Please try again.",
+            : "CareerBridge is taking longer than expected to connect. Please wait a few seconds and try again.",
         );
       }
 
