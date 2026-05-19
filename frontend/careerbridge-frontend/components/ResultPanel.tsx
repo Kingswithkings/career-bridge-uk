@@ -67,6 +67,45 @@ function getApplyUrl(job: JobItem) {
   return job.redirect_url || job.apply_url || job.application_url || job.url || null;
 }
 
+function JobCards({ jobs, countLabel }: { jobs: JobItem[]; countLabel: string }) {
+  return (
+    <div className="space-y-4">
+      <p className="text-slate-300">{countLabel}</p>
+
+      {jobs.map((job, index) => {
+        const applyUrl = getApplyUrl(job);
+
+        return (
+          <article key={`${job.title}-${job.company}-${index}`} className="bg-slate-900 border border-slate-800 p-5 rounded">
+            <h2 className="text-xl font-semibold">{job.title || "Untitled role"}</h2>
+            <p className="text-slate-400">
+              {[job.company, job.location].filter(Boolean).join(" - ")}
+            </p>
+            {(job.salary_min || job.salary_max) && (
+              <p className="mt-2 text-slate-300">
+                Salary: {[job.salary_min, job.salary_max].filter(Boolean).join(" - ")}
+              </p>
+            )}
+            {job.description && <p className="mt-3 text-slate-200 whitespace-pre-wrap">{job.description}</p>}
+            {applyUrl ? (
+              <a
+                href={applyUrl}
+                className="mt-4 inline-flex rounded bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-500"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Apply now
+              </a>
+            ) : (
+              <p className="mt-4 text-sm text-slate-400">Apply link unavailable for this listing.</p>
+            )}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ResultPanel({ result }: { result: string }) {
   const parsed = parseJson(result);
 
@@ -92,39 +131,33 @@ export default function ResultPanel({ result }: { result: string }) {
 
   if (isRecord(parsed) && Array.isArray(parsed.results) && parsed.results.every(isJobItem)) {
     return (
-      <div className="space-y-4">
-        <p className="text-slate-300">{String(parsed.count ?? parsed.results.length)} jobs found.</p>
+      <JobCards
+        jobs={parsed.results}
+        countLabel={`${String(parsed.count ?? parsed.results.length)} jobs found.`}
+      />
+    );
+  }
 
-        {parsed.results.map((job, index) => {
-          const applyUrl = getApplyUrl(job);
+  if (isRecord(parsed) && typeof parsed.match_result === "string") {
+    const matchedJobs = Array.isArray(parsed.matched_jobs)
+      ? parsed.matched_jobs.filter(isJobItem)
+      : [];
 
-          return (
-            <article key={`${job.title}-${job.company}-${index}`} className="bg-slate-900 border border-slate-800 p-5 rounded">
-              <h2 className="text-xl font-semibold">{job.title || "Untitled role"}</h2>
-              <p className="text-slate-400">
-                {[job.company, job.location].filter(Boolean).join(" - ")}
-              </p>
-              {(job.salary_min || job.salary_max) && (
-                <p className="mt-2 text-slate-300">
-                  Salary: {[job.salary_min, job.salary_max].filter(Boolean).join(" - ")}
-                </p>
-              )}
-              {job.description && <p className="mt-3 text-slate-200 whitespace-pre-wrap">{job.description}</p>}
-              {applyUrl ? (
-                <a
-                  href={applyUrl}
-                  className="mt-4 inline-flex rounded bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-500"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Apply now
-                </a>
-              ) : (
-                <p className="mt-4 text-sm text-slate-400">Apply link unavailable for this listing.</p>
-              )}
-            </article>
-          );
-        })}
+    return (
+      <div className="space-y-6">
+        <section className="bg-slate-900 border border-slate-800 p-6 rounded">
+          <h2 className="text-xl font-semibold">Match result</h2>
+          <p className="mt-4 whitespace-pre-wrap text-slate-100">{parsed.match_result}</p>
+        </section>
+
+        {matchedJobs.length > 0 ? (
+          <JobCards
+            jobs={matchedJobs}
+            countLabel={`${String(parsed.jobs_count ?? matchedJobs.length)} matched jobs found. You can apply from these listings.`}
+          />
+        ) : (
+          <p className="text-slate-300">No matched jobs were returned for this search.</p>
+        )}
       </div>
     );
   }
