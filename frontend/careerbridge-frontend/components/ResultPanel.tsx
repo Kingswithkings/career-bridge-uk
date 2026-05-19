@@ -15,6 +15,9 @@ type JobItem = {
   salary_max?: number | null;
   description?: string | null;
   redirect_url?: string | null;
+  apply_url?: string | null;
+  application_url?: string | null;
+  url?: string | null;
 };
 
 function parseJson(text: string) {
@@ -49,7 +52,19 @@ function isSavedResult(value: unknown): value is SavedResult {
 }
 
 function isJobItem(value: unknown): value is JobItem {
-  return isRecord(value) && ("title" in value || "company" in value || "redirect_url" in value);
+  return (
+    isRecord(value) &&
+    ("title" in value ||
+      "company" in value ||
+      "redirect_url" in value ||
+      "apply_url" in value ||
+      "application_url" in value ||
+      "url" in value)
+  );
+}
+
+function getApplyUrl(job: JobItem) {
+  return job.redirect_url || job.apply_url || job.application_url || job.url || null;
 }
 
 export default function ResultPanel({ result }: { result: string }) {
@@ -80,25 +95,36 @@ export default function ResultPanel({ result }: { result: string }) {
       <div className="space-y-4">
         <p className="text-slate-300">{String(parsed.count ?? parsed.results.length)} jobs found.</p>
 
-        {parsed.results.map((job, index) => (
-          <article key={`${job.title}-${job.company}-${index}`} className="bg-slate-900 border border-slate-800 p-5 rounded">
-            <h2 className="text-xl font-semibold">{job.title || "Untitled role"}</h2>
-            <p className="text-slate-400">
-              {[job.company, job.location].filter(Boolean).join(" - ")}
-            </p>
-            {(job.salary_min || job.salary_max) && (
-              <p className="mt-2 text-slate-300">
-                Salary: {[job.salary_min, job.salary_max].filter(Boolean).join(" - ")}
+        {parsed.results.map((job, index) => {
+          const applyUrl = getApplyUrl(job);
+
+          return (
+            <article key={`${job.title}-${job.company}-${index}`} className="bg-slate-900 border border-slate-800 p-5 rounded">
+              <h2 className="text-xl font-semibold">{job.title || "Untitled role"}</h2>
+              <p className="text-slate-400">
+                {[job.company, job.location].filter(Boolean).join(" - ")}
               </p>
-            )}
-            {job.description && <p className="mt-3 text-slate-200 whitespace-pre-wrap">{job.description}</p>}
-            {job.redirect_url && (
-              <a href={job.redirect_url} className="mt-4 inline-block text-blue-400" target="_blank">
-                View job
-              </a>
-            )}
-          </article>
-        ))}
+              {(job.salary_min || job.salary_max) && (
+                <p className="mt-2 text-slate-300">
+                  Salary: {[job.salary_min, job.salary_max].filter(Boolean).join(" - ")}
+                </p>
+              )}
+              {job.description && <p className="mt-3 text-slate-200 whitespace-pre-wrap">{job.description}</p>}
+              {applyUrl ? (
+                <a
+                  href={applyUrl}
+                  className="mt-4 inline-flex rounded bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-500"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Apply now
+                </a>
+              ) : (
+                <p className="mt-4 text-sm text-slate-400">Apply link unavailable for this listing.</p>
+              )}
+            </article>
+          );
+        })}
       </div>
     );
   }
