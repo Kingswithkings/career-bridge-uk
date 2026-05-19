@@ -530,7 +530,23 @@ export default function JobsPage() {
   }
 
   function getLocation() {
-    return [city.trim(), country.trim()].filter(Boolean).join(", ");
+    const trimmedCity = city.trim();
+    const trimmedCountry = country.trim();
+    const isUkCountry = ["United Kingdom", "UK", "GB", "Great Britain"].includes(trimmedCountry);
+
+    if (["Remote", "Hybrid"].includes(trimmedCity)) {
+      return "";
+    }
+
+    if (trimmedCity && isUkCountry) {
+      return trimmedCity;
+    }
+
+    if (!trimmedCity && isUkCountry) {
+      return "";
+    }
+
+    return [trimmedCity, trimmedCountry].filter(Boolean).join(", ");
   }
 
   async function uploadCv(event: ChangeEvent<HTMLInputElement>) {
