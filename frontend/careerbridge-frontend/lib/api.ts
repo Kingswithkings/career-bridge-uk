@@ -175,4 +175,6 @@ export const endpoints = {
 
   saveResult: "/api/results/save",
   getResults: "/api/results/",
+
+  feedback: "/api/feedback",
 };

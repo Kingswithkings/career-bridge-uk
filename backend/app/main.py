@@ -11,6 +11,7 @@ from sqlalchemy import inspect, text
 
 from .api.routes.auth_routes import router as auth_router
 from .api.routes.cv_routes import router as cv_router
+from .api.routes.feedback_routes import router as feedback_router
 from .api.routes.interview_routes import router as interview_router
 from .api.routes.job_routes import router as job_router
 from .api.routes.result_routes import router as result_router
@@ -19,6 +20,7 @@ from .limiter import limiter
 
 import_module(f"{__package__}.models.result_model")
 import_module(f"{__package__}.models.user_model")
+import_module(f"{__package__}.models.feedback_model")
 Base.metadata.create_all(bind=engine)
 
 
@@ -110,6 +112,7 @@ app.include_router(cv_router)
 app.include_router(interview_router)
 app.include_router(job_router)
 app.include_router(result_router)
+app.include_router(feedback_router)
 
 
 @app.exception_handler(RequestValidationError)
