@@ -13,7 +13,7 @@ OPENAI_MAX_OUTPUT_TOKENS = int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS", "1200"))
 ADZUNA_APP_ID = os.getenv("ADZUNA_APP_ID")
 ADZUNA_APP_KEY = os.getenv("ADZUNA_APP_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://careerbridge-uk.streamlit.app")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://career-bridge-uk.1st-kings.com")
 IS_RENDER = os.getenv("RENDER", "").strip().lower() == "true"
 APP_ENV = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development")).strip().lower()
 IS_PRODUCTION = APP_ENV in {"production", "prod"} or IS_RENDER
