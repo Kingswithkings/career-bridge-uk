@@ -14,7 +14,7 @@ export default function Footer() {
           <Link href="/feedback" className="hover:text-white">
             Feedback
           </Link>
-          <a href="mailto:contact@1st-kings.com" className="hover:text-white">
+          <a href="mailto:kings@1st-kings.com" className="hover:text-white">
             Contact
           </a>
         </div>
