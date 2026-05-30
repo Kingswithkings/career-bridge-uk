@@ -2,6 +2,7 @@
 
 import { type ChangeEvent, useState } from "react";
 import { apiPost, apiUploadFile, endpoints } from "@/lib/api";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AuthGate from "@/components/AuthGate";
 import ResultPanel from "@/components/ResultPanel";
@@ -206,6 +207,13 @@ export default function InterviewPage() {
       <main className="min-h-screen bg-slate-950 text-white px-6 py-12">
       <div className="max-w-5xl mx-auto space-y-6">
         <h1 className="text-4xl font-bold">Interview Preparation</h1>
+
+        <Link
+          href="/interview/body-language"
+          className="inline-flex rounded bg-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-700"
+        >
+          Body Language Coach
+        </Link>
 
         <input
           className="w-full p-3 rounded bg-slate-800 border border-slate-700"
