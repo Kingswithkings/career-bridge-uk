@@ -50,6 +50,7 @@ export default function Navbar() {
                 <Link href="/career-paths">Career Paths</Link>
                 <Link href="/salary-insights">Salary Insights</Link>
                 <Link href="/interview">Interview</Link>
+                <Link href="/interview/body-language">Body Language</Link>
                 <Link href="/results">Results</Link>
                 <Link href="/feedback">Feedback</Link>
                 <button

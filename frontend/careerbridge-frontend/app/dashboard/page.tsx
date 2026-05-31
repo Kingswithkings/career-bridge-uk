@@ -24,6 +24,11 @@ export default function DashboardPage() {
               <p className="text-slate-400 mt-2">Prepare for interviews.</p>
             </Link>
 
+            <Link href="/interview/body-language" className="bg-slate-900 p-6 rounded-2xl">
+              <h2 className="text-2xl font-semibold">Body Language Coach</h2>
+              <p className="text-slate-400 mt-2">Practise camera presence and interview confidence.</p>
+            </Link>
+
             <Link href="/uk-visas" className="bg-slate-900 p-6 rounded-2xl">
               <h2 className="text-2xl font-semibold">UK Visas</h2>
               <p className="text-slate-400 mt-2">Compare UK work routes and official GOV.UK guidance.</p>
