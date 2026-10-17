@@ -19,6 +19,11 @@ APP_ENV = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development")).strip().
 IS_PRODUCTION = APP_ENV in {"production", "prod"} or IS_RENDER
 
 SMTP_HOST = os.getenv("SMTP_HOST")
+ZOHO_CLIENT_ID = os.getenv("ZOHO_CLIENT_ID")
+ZOHO_CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET")
+ZOHO_REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN")
+ZOHO_ACCOUNT_ID = os.getenv("ZOHO_ACCOUNT_ID")
+ZOHO_FROM_EMAIL = os.getenv("ZOHO_FROM_EMAIL")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")

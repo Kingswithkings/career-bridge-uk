@@ -9,6 +9,7 @@ import ActionButton from "@/components/ActionButton";
 export default function RegisterPage() {
   const router = useRouter();
 
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
@@ -16,10 +17,18 @@ export default function RegisterPage() {
 
   async function register() {
     setMessage("");
+    if (!fullName.trim()) {
+      setMessage("Please enter your full name.");
+      return;
+    }
     setIsRegistering(true);
 
     try {
-      const data = await apiPost(endpoints.register, { email, password });
+      const data = await apiPost(endpoints.register, {
+        full_name: fullName.trim(),
+        email,
+        password,
+      });
 
       if (!data.access_token) {
         throw new Error("Registration response did not include an access token.");
@@ -41,6 +50,20 @@ export default function RegisterPage() {
     <main className="min-h-screen bg-slate-950 text-white px-6 py-16">
       <div className="max-w-md mx-auto bg-slate-900 p-6 rounded-2xl space-y-4">
         <h1 className="text-3xl font-bold">Create Account</h1>
+
+        <label htmlFor="full-name" className="block text-sm font-medium">
+          Full name
+        </label>
+        <input
+          id="full-name"
+          name="name"
+          autoComplete="name"
+          required
+          className="w-full p-3 rounded bg-slate-800 border border-slate-700"
+          placeholder="Full name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
 
         <input
           className="w-full p-3 rounded bg-slate-800 border border-slate-700"

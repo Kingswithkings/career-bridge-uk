@@ -2,6 +2,8 @@ import logging
 import smtplib
 from email.message import EmailMessage
 
+from . import zoho_mail
+
 from ..config import (
     FRONTEND_URL,
     SMTP_FROM_EMAIL,
@@ -24,11 +26,12 @@ def send_registration_confirmation_email(
     email: str,
     full_name: str | None = None,
 ) -> bool:
-    if not _smtp_is_configured():
+    if not zoho_mail.is_selected() and not _smtp_is_configured():
         logger.info("Skipping registration email because SMTP is not configured")
         return False
 
-    display_name = full_name.strip() if full_name else "there"
+    name_parts = (full_name or "").split()
+    display_name = name_parts[0] if name_parts else "there"
     message = EmailMessage()
     message["Subject"] = "Welcome to CareerBridge UK"
     message["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
@@ -57,6 +60,9 @@ def send_registration_confirmation_email(
         )
     )
 
+    if zoho_mail.is_selected():
+        return zoho_mail.send_message(message)
+
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
             if SMTP_USE_TLS:
@@ -76,7 +82,7 @@ def send_password_reset_code(
     code: str,
     full_name: str | None = None,
 ) -> bool:
-    if not _smtp_is_configured():
+    if not zoho_mail.is_selected() and not _smtp_is_configured():
         logger.info("Skipping password reset email because SMTP is not configured")
         return False
 
@@ -106,6 +112,9 @@ def send_password_reset_code(
             ]
         )
     )
+
+    if zoho_mail.is_selected():
+        return zoho_mail.send_message(message)
 
     try:
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:

@@ -1,6 +1,8 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://career-bridge-uk.onrender.com";
-const REQUEST_TIMEOUT_MS = 15000;
+// Render can take about a minute to wake an idle backend. Allow startup time
+// for all request types, including login and file uploads.
+const REQUEST_TIMEOUT_MS = 90000;
 const AI_REQUEST_TIMEOUT_MS = 120000;
 const AI_ENDPOINTS = new Set([
   "/api/cv/analyze",

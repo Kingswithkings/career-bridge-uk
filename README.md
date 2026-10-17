@@ -45,7 +45,32 @@ default SQLite database is only suitable for local development; on ephemeral
 hosts such as Render, accounts can disappear after a restart or redeploy, which
 will make valid-looking logins return `401 Invalid email or password`.
 
-Optional registration confirmation email settings in `backend/.env`:
+For Zoho Mail on Render Free, use the HTTPS API transport (.com region).
+Set these in the backend environment:
+
+```text
+ZOHO_CLIENT_ID=<Zoho Self Client ID>
+ZOHO_CLIENT_SECRET=<Zoho Self Client secret>
+ZOHO_FROM_EMAIL=kings@1st-kings.com
+ZOHO_REFRESH_TOKEN=<refresh token from the setup helper>
+ZOHO_ACCOUNT_ID=<account ID from the setup helper>
+```
+
+Run `python3 backend/scripts/setup_zoho_mail.py` in your local terminal. It prompts
+for credentials with hidden input, exchanges a fresh Self Client authorization
+code using `ZohoMail.messages.CREATE,ZohoMail.accounts.READ`, and finds the sender's
+account ID. It saves the refresh token and account ID in a private temporary file
+outside the repository. Copy those values into Render, then delete the file.
+Never commit or share tokens or client secrets. The helper does not send emails.
+
+When `ZOHO_CLIENT_ID` is set, both welcome and password reset messages use Zoho
+over HTTPS. All five values above are required. Access tokens are cached and
+refreshed automatically on expiry. Failed sends are logged without provider
+response bodies and are not automatically retried. Deploy the updated backend
+after saving the settings; saving environment variables alone does not install
+this transport. The sender's display name comes from the Zoho mailbox settings.
+
+Alternatively, SMTP welcome email settings in `backend/.env` (also set these in the deployed backend's environment; Render Free blocks SMTP ports):
 
 ```text
 DATABASE_URL=postgresql://user:password@host:5432/database
@@ -59,8 +84,15 @@ SMTP_USE_TLS=true
 FRONTEND_URL=https://your-frontend-url
 ```
 
-If these are not set, account registration still succeeds and the confirmation
+If neither provider is configured, account registration still succeeds and the confirmation
 email is skipped.
+
+After successful registration, the backend sends a welcome email to the registered
+email address in a background task. The greeting uses the first word of the
+registered full name (for example, "Hi Sarah," for "Sarah Jones"), or "Hi there,"
+when no name is supplied. Email delivery failures are logged without blocking
+registration. Delivery requires a configured email provider; background tasks do not
+automatically retry failed sends.
 
 Frontend:
 
