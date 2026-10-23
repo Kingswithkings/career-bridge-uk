@@ -28,3 +28,29 @@ jobs:
 
       - name: Run CareerBridge XAI tests
         run: python -m pytest backend/tests/test_xai_*.py -q
+
+  meterless-demo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/app/xai/integrations/meterless/package-lock.json
+
+      - name: Install Meterless dependencies
+        working-directory: backend/app/xai/integrations/meterless
+        run: npm ci
+
+      - name: Verify Meterless evidence graph
+        run: |
+          backend/app/xai/integrations/meterless/node_modules/.bin/tsx \
+            backend/app/xai/integrations/meterless/bridge.ts \
+            docs/careerbridge-xai/sample_jobs.json \
+            > /tmp/careerbridge-meterless-ci.json
+          node -e 'const r=require("/tmp/careerbridge-meterless-ci.json"); if(r.jobs_received!==3 || r.evidence_graph.relationship_count!==12 || r.second_ingest.skipped_unchanged!==3) process.exit(1); console.log("Meterless evidence graph: PASSED")'
