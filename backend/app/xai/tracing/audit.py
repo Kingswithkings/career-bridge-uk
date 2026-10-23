@@ -27,6 +27,24 @@ def write_xai_audit(result: dict) -> None:
                 for job in result["evidence_graph"]["jobs"]
             ],
         },
+        "agent_trace": result.get("agent_trace", []),
+        "nightshift": {
+            "status": result.get("nightshift", {}).get("status", "not_recorded"),
+            "used": result.get("nightshift", {}).get("used", False),
+            "model_reported": result.get("nightshift", {}).get("model_reported"),
+        },
+        "investigation": {
+            "evidence_jobs": result.get("investigation", {}).get("evidence_jobs", 0),
+            "source_critique": result.get("investigation", {}).get("source_critique", {}),
+            "priority_skill_gaps": [
+                {
+                    "skill": item["skill"],
+                    "jobs_mentioning_gap": item["jobs_mentioning_gap"],
+                    "cited_job_ids": [ref["job_id"] for ref in item["evidence_references"]],
+                }
+                for item in result.get("investigation", {}).get("priority_skill_gaps", [])
+            ],
+        },
         "evaluations": [
             {
                 "job_id": item["job_id"],
