@@ -58,6 +58,7 @@ def test_opt_in_adds_second_source_and_preserves_uncertainty(monkeypatch):
     assert result["jobs_evaluated"] == 2
     assert result["agent_trace"][1]["records_added"] == 1
     assert result["investigation"]["source_critique"]["provider_count"] == 2
+    assert result["investigation"]["source_critique"]["sufficient_for_cross_source_inference"] is False
     assert result["investigation"]["question"] == "Why?"
     assert result["results"][1]["evaluation"]["verified_live_vacancy"] is False
     assert result["results"][1]["evaluation"]["metric_label"] == "skill mention coverage"
