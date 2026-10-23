@@ -129,3 +129,22 @@ backend/app/xai/integrations/meterless/vendor/UPSTREAM.md
 
 CareerBridge XAI adds the integration adapters,
 career agents, orchestration and explanations.
+
+## Combined offline hackathon demonstration
+
+Install Meterless dependencies as documented above.
+
+From the repository root, with Python dependencies installed:
+
+    ./docs/careerbridge-xai/demo/run_all.sh
+
+The demonstration shows:
+- Meterless job-to-skill evidence graph and provenance
+- Idempotent ingestion of three synthetic job records
+- Required-skill coverage calculations
+- Matched and missing skills
+- Human-readable explanations
+
+The offline demonstration does not require Zetaris.
+The full FastAPI endpoint uses Zetaris separately.
+All sample job records are synthetic.
