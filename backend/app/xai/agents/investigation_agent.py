@@ -8,6 +8,8 @@ def critique_sources(records: list[dict]) -> dict:
     origins = {str(r.get("evidence_origin", "unknown")) for r in records}
     live = [r for r in records if r.get("source_type") != "sample"]
     usable = [r for r in records if r.get("required_skills")]
+    live_usable = [r for r in live if r.get("required_skills")]
+    live_providers = {str(r.get("evidence_origin", "unknown")) for r in live_usable}
     reasons = []
     if not records:
         reasons.append("No job evidence was retrieved.")
@@ -15,17 +17,21 @@ def critique_sources(records: list[dict]) -> dict:
         reasons.append("Fewer than two jobs have usable skills evidence.")
     if not live:
         reasons.append("All retrieved job records are sample data, not real vacancies.")
-    if len(origins) < 2:
-        reasons.append("Evidence comes from fewer than two job-data providers.")
+    if len(live_providers) < 2:
+        reasons.append(
+            "Fewer than two independently sourced non-sample job-data providers are represented."
+        )
     if live and not all(r.get("source_url") for r in live):
         reasons.append("At least one non-sample listing has no source URL.")
     return {
-        "sufficient_for_cross_source_inference": bool(len(usable) >= 2 and len(origins) >= 2 and live),
-        "needs_additional_source": len(origins) < 2 or not live,
+        "sufficient_for_cross_source_inference": bool(len(live_usable) >= 2 and len(live_providers) >= 2),
+        "needs_additional_source": len(live_providers) < 2,
         "limitations": reasons,
         "provider_count": len(origins),
         "providers": sorted(origins),
+        "non_sample_providers": sorted(live_providers),
         "non_sample_count": len(live),
+        "usable_non_sample_count": len(live_usable),
         "sample_count": len(records) - len(live),
     }
 
