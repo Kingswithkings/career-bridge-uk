@@ -1,0 +1,40 @@
+"""JSONL audit logging for CareerBridge XAI."""
+import json
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+
+def write_xai_audit(result: dict) -> None:
+    path = Path(os.getenv(
+        "XAI_AUDIT_PATH",
+        "/tmp/careerbridge-xai-audit.jsonl"
+    ))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "run_id": result["run_id"],
+        "candidate_goal": result["candidate_goal"],
+        "jobs_evaluated": result["jobs_evaluated"],
+        "meterless": {
+            "engine": result["meterless"]["engine"],
+            "jobs_received": result["meterless"]["jobs_received"],
+            "relationship_count": result["evidence_graph"]["relationship_count"],
+            "jobs": [
+                {
+                    "id": job["id"],
+                    "provenance": job.get("provenance"),
+                }
+                for job in result["evidence_graph"]["jobs"]
+            ],
+        },
+        "evaluations": [
+            {
+                "job_id": item["job_id"],
+                "evaluation": item["evaluation"],
+                "explanation": item["explanation"]
+            }
+            for item in result["results"]
+        ]
+    }
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, default=str) + "\n")

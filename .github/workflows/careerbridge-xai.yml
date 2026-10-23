@@ -1,0 +1,67 @@
+name: CareerBridge XAI Tests
+
+on:
+  push:
+    branches:
+      - feature/careerbridge-xai
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  xai-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest pydantic fastapi JayDeBeApi JPype1
+
+      - name: Run CareerBridge XAI tests
+        run: python -m pytest backend/tests/test_xai_*.py -q
+
+  meterless-demo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/app/xai/integrations/meterless/package-lock.json
+
+      - name: Install Meterless dependencies
+        working-directory: backend/app/xai/integrations/meterless
+        run: npm ci
+
+      - name: Verify Meterless evidence graph
+        run: |
+          backend/app/xai/integrations/meterless/node_modules/.bin/tsx \
+            backend/app/xai/integrations/meterless/bridge.ts \
+            docs/careerbridge-xai/sample_jobs.json \
+            > /tmp/careerbridge-meterless-ci.json
+          node -e 'const r=require("/tmp/careerbridge-meterless-ci.json"); if(r.jobs_received!==3 || r.evidence_graph.relationship_count!==12 || r.second_ingest.skipped_unchanged!==3) process.exit(1); console.log("Meterless evidence graph: PASSED")'
+
+      - name: Set up Python for combined demonstration
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install matching dependencies
+        run: python -m pip install pydantic
+
+      - name: Run complete offline demonstration
+        run: bash docs/careerbridge-xai/demo/run_all.sh

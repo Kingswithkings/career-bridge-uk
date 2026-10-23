@@ -1,0 +1,53 @@
+[
+  {
+    "job_id": "DEMO-001",
+    "job_title": "AI Engineer",
+    "company": "Demo Technology Ltd",
+    "required_skills": [
+      "Python",
+      "FastAPI",
+      "Machine Learning",
+      "LLMs"
+    ],
+    "experience_years": 2.0,
+    "source_url": null,
+    "source_type": "sample",
+    "collected_at": "2026-10-22T06:59:54.842174+00:00",
+    "evidence_origin": "zetaris",
+    "verified_live_vacancy": false
+  },
+  {
+    "job_id": "DEMO-002",
+    "job_title": "Backend Python Developer",
+    "company": "Demo Software Ltd",
+    "required_skills": [
+      "Python",
+      "FastAPI",
+      "PostgreSQL",
+      "Docker"
+    ],
+    "experience_years": 2.0,
+    "source_url": null,
+    "source_type": "sample",
+    "collected_at": "2026-10-22T06:59:54.842174+00:00",
+    "evidence_origin": "zetaris",
+    "verified_live_vacancy": false
+  },
+  {
+    "job_id": "DEMO-003",
+    "job_title": "Conversational AI Engineer",
+    "company": "Demo AI Solutions Ltd",
+    "required_skills": [
+      "Python",
+      "NLP",
+      "Prompt Engineering",
+      "RAG"
+    ],
+    "experience_years": 3.0,
+    "source_url": null,
+    "source_type": "sample",
+    "collected_at": "2026-10-22T06:59:54.842174+00:00",
+    "evidence_origin": "zetaris",
+    "verified_live_vacancy": false
+  }
+]

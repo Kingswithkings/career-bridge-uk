@@ -16,6 +16,7 @@ from .api.routes.feedback_routes import router as feedback_router
 from .api.routes.interview_routes import router as interview_router
 from .api.routes.job_routes import router as job_router
 from .api.routes.result_routes import router as result_router
+from .api.routes.xai_routes import router as xai_router
 from .database import Base, engine
 from .limiter import limiter
 from .posthog_client import posthog_client
@@ -123,6 +124,7 @@ app.include_router(interview_router)
 app.include_router(job_router)
 app.include_router(result_router)
 app.include_router(feedback_router)
+app.include_router(xai_router)
 
 
 @app.exception_handler(RequestValidationError)
