@@ -60,7 +60,7 @@ def test_investigation_cites_each_skill_gap_and_never_infers_rejection_reason():
     assert finding["priority_skill_gaps"][0]["jobs_mentioning_gap"] == 2
     refs = finding["priority_skill_gaps"][0]["evidence_references"]
     assert {ref["job_id"] for ref in refs} == {"DEMO-001", "ADZ-001"}
-    assert refs[1]["evidence_method"] == "description_keyword_mentions"
+    assert next(ref for ref in refs if ref["job_id"] == "ADZ-001")["evidence_method"] == "description_keyword_mentions"
     assert "does not establish why" in finding["conclusion"]
     assert any("not proof" in warning for warning in finding["boundaries"])
 
