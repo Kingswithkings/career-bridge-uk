@@ -1,0 +1,13 @@
+{
+  "name": "careerbridge-xai-meterless",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Vendored Meterless World Model bridge for CareerBridge XAI",
+  "scripts": {
+    "bridge": "tsx bridge.ts"
+  },
+  "devDependencies": {
+    "tsx": "4.20.3"
+  }
+}
