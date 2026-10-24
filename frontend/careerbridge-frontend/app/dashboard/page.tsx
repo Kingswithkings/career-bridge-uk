@@ -9,6 +9,18 @@ export default function DashboardPage() {
           <h1 className="text-4xl font-bold">Dashboard</h1>
 
           <div className="grid md:grid-cols-3 gap-6">
+
+            <Link href="/dashboard/xai" className="bg-slate-900 p-6 rounded-2xl border border-blue-800 hover:bg-slate-800 transition-colors">
+              <p className="text-xs font-semibold uppercase tracking-wider text-blue-300 mb-2">
+                Explainable AI
+              </p>
+              <h2 className="text-2xl font-semibold">AI Career Investigation</h2>
+              <p className="text-slate-400 mt-2">
+                Investigate career opportunities with evidence-backed skill analysis,
+                source citations, and transparent AI reasoning.
+              </p>
+            </Link>
+
             <Link href="/cv" className="bg-slate-900 p-6 rounded-2xl">
               <h2 className="text-2xl font-semibold">CV Tools</h2>
               <p className="text-slate-400 mt-2">Analyze and improve your CV.</p>

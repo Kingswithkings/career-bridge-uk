@@ -7,6 +7,7 @@ def explain_job_match(evaluation: dict) -> dict:
     job_title = evaluation["job_title"]
     company = evaluation["company"]
     score = evaluation["skill_match_percentage"]
+    metric_label = evaluation.get("metric_label", "listed required-skill coverage")
     matched = evaluation["matched_skills"]
     missing = evaluation["missing_skills"]
 
@@ -17,7 +18,7 @@ def explain_job_match(evaluation: dict) -> dict:
         )
     else:
         summary = (
-            f"The candidate matches {score:g}% of the listed skills "
+            f"The candidate has {score:g}% {metric_label} "
             f"for {job_title} at {company}."
         )
 

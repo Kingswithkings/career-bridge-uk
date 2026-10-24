@@ -76,3 +76,28 @@ def retrieve_job_evidence(limit=10):
         evidence.append(record)
 
     return evidence
+
+
+def retrieve_demo_job_evidence(limit=10):
+    """Load explicitly synthetic jobs without connecting to Zetaris."""
+    import json
+    from pathlib import Path
+
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100:
+        raise ValueError("limit must be an integer between 1 and 100")
+
+    root = Path(__file__).resolve().parents[4]
+    path = root / "docs/careerbridge-xai/sample_jobs.json"
+    records = json.loads(path.read_text(encoding="utf-8"))
+
+    evidence = []
+    for item in records[:limit]:
+        record = dict(item)
+        record["source_type"] = "sample"
+        record["evidence_origin"] = "demo"
+        record["verified_live_vacancy"] = False
+        record["skill_evidence_method"] = "synthetic_demo_data"
+        record["required_skills"] = list(record.get("required_skills") or [])
+        evidence.append(record)
+
+    return evidence
