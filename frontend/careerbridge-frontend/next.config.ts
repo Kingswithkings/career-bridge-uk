@@ -6,6 +6,9 @@ const backendUrl =
   "https://career-bridge-uk.onrender.com";
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
   async rewrites() {
     return [
       {

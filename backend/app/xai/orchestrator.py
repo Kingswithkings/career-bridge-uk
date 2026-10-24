@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from backend.app.xai.schemas import CareerProfile, JobEvidence
 from backend.app.xai.agents.career_planning import analyse_career_profile
-from backend.app.xai.agents.evidence_agent import retrieve_job_evidence
+from backend.app.xai.agents.evidence_agent import retrieve_job_evidence, retrieve_demo_job_evidence
 from backend.app.xai.agents.evaluation_agent import evaluate_job_match
 from backend.app.xai.agents.explanation_agent import explain_job_match
 from backend.app.xai.agents.investigation_agent import critique_sources, investigate_career_evidence
@@ -28,10 +28,21 @@ def run_careerbridge_xai(
     API outages never become fabricated job evidence.
     """
     run_id = str(uuid4())
-    records = retrieve_job_evidence(limit=limit)
+    import os
+
+    demo_mode = (
+        os.getenv("CAREERBRIDGE_XAI_DEMO_MODE", "").lower()
+        in {"true", "1", "yes"}
+    )
+
+    records = (
+        retrieve_demo_job_evidence(limit=limit)
+        if demo_mode
+        else retrieve_job_evidence(limit=limit)
+    )
     trace = [
         {
-            "step": "retrieve_zetaris",
+            "step": "retrieve_demo_evidence" if demo_mode else "retrieve_zetaris",
             "status": "completed",
             "records": len(records),
             "source_critique": critique_sources(records)["limitations"],
