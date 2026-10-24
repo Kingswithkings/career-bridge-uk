@@ -11,6 +11,7 @@ from backend.app.xai.agents.investigation_agent import critique_sources, investi
 from backend.app.xai.agents.live_job_agent import retrieve_live_job_evidence
 from backend.app.xai.integrations.meterless_client import build_meterless_graph
 from backend.app.xai.integrations.nightshift_runtime import request_nightshift_insight
+from backend.app.xai.integrations.nvidia_nemotron import request_nvidia_insight
 from backend.app.xai.tracing.audit import write_xai_audit
 
 
@@ -21,6 +22,7 @@ def run_careerbridge_xai(
     include_live_jobs: bool = False,
     location: str | None = None,
     question: str | None = None,
+    include_nvidia_insight: bool = False,
 ) -> dict:
     """Investigate job evidence, optionally enrich it, critique and explain it.
 
@@ -138,6 +140,17 @@ def run_careerbridge_xai(
         "status": nightshift["status"],
         "used": nightshift["used"],
     })
+    nvidia = (
+        request_nvidia_insight(investigation)
+        if include_nvidia_insight
+        else {"status": "not_requested", "used": False}
+    )
+    trace.append({
+        "step": "nvidia_inference",
+        "status": nvidia["status"],
+        "used": nvidia["used"],
+    })
+
     response = {
         "run_id": run_id,
         "candidate_goal": candidate.career_goal,
@@ -148,6 +161,7 @@ def run_careerbridge_xai(
         "investigation": investigation,
         "agent_trace": trace,
         "nightshift": nightshift,
+        "nvidia": nvidia,
     }
     write_xai_audit(response)
     return response

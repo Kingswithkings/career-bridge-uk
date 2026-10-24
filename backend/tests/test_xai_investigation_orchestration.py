@@ -97,3 +97,50 @@ def test_default_does_not_call_live_source(monkeypatch):
         CareerProfile(skills=["Python"], career_goal="AI Engineer")
     )
     assert result["agent_trace"][1]["status"] == "not_requested"
+
+
+def test_nvidia_inference_requires_explicit_opt_in(monkeypatch):
+    setup_offline(monkeypatch)
+    monkeypatch.setenv("CAREERBRIDGE_XAI_DEMO_MODE", "false")
+
+    calls = []
+
+    def fake_nvidia(investigation):
+        calls.append(investigation)
+        return {
+            "status": "success",
+            "used": True,
+            "model_reported": "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "advisory_narrative": "Evidence-grounded test explanation.",
+            "independently_verified": False,
+        }
+
+    monkeypatch.setattr(
+        orchestrator, "request_nvidia_insight", fake_nvidia
+    )
+
+    candidate = CareerProfile(
+        skills=["Python"],
+        career_goal="AI Engineer",
+    )
+
+    default = orchestrator.run_careerbridge_xai(candidate)
+
+    assert default["nvidia"]["status"] == "not_requested"
+    assert calls == []
+
+    enabled = orchestrator.run_careerbridge_xai(
+        candidate,
+        include_nvidia_insight=True,
+    )
+
+    assert enabled["nvidia"]["status"] == "success"
+    assert enabled["nvidia"]["used"] is True
+    assert len(calls) == 1
+    assert enabled["nvidia"]["independently_verified"] is False
+
+    assert any(
+        step["step"] == "nvidia_inference"
+        and step["status"] == "success"
+        for step in enabled["agent_trace"]
+    )
