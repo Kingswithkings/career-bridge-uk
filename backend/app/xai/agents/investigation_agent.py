@@ -36,6 +36,60 @@ def critique_sources(records: list[dict]) -> dict:
     }
 
 
+
+def assess_skill_gap_hypotheses(skill: str, refs: list[dict]) -> dict:
+    """Separate profile evidence, vacancy claims, and unresolved assumptions."""
+    live = [r for r in refs if r.get("source_type") != "sample"]
+    synthetic = [r for r in refs if r.get("source_type") == "sample"]
+
+    if not live:
+        next_check = (
+            f"Retrieve real job descriptions mentioning {skill}; "
+            "synthetic examples cannot establish labor-market demand."
+        )
+    elif any(not r.get("source_url") for r in live):
+        next_check = (
+            "Locate the original source for each uncited listing "
+            "before treating it as supporting evidence."
+        )
+    else:
+        next_check = (
+            f"Inspect the cited descriptions to establish whether {skill} "
+            "is mandatory, preferred, or merely mentioned."
+        )
+
+    return {
+        "hypotheses": [
+            {
+                "claim": f"{skill} is not documented in the submitted profile.",
+                "assessment": "supported_by_profile_comparison",
+                "supporting_job_ids": [
+                    r["job_id"] for r in refs
+                ],
+            },
+            {
+                "claim": f"{skill} is a mandatory employer requirement.",
+                "assessment": "unverified",
+                "reason": (
+                    "The retrieved skill evidence has not established "
+                    "that each mention represents a mandatory requirement."
+                ),
+            },
+            {
+                "claim": f"The candidate cannot perform work involving {skill}.",
+                "assessment": "unknown",
+                "reason": (
+                    "An omitted profile skill does not prove a lack "
+                    "of practical ability."
+                ),
+            },
+        ],
+        "live_listing_references": len(live),
+        "synthetic_references": len(synthetic),
+        "next_evidence_check": next_check,
+    }
+
+
 def investigate_career_evidence(candidate, results: list[dict], records: list[dict], *, question: str | None = None) -> dict:
     """Produce grounded, source-addressable gap hypotheses and next actions."""
     by_id = {str(record["job_id"]): record for record in records}
@@ -66,6 +120,9 @@ def investigate_career_evidence(candidate, results: list[dict], records: list[di
                 "source_type": by_id[job_id].get("source_type", "unknown"),
                 "source_url": by_id[job_id].get("source_url"),
                 "evidence_method": by_id[job_id].get("skill_evidence_method", "source_requirements"),
+                "source_excerpt": by_id[job_id].get(
+                    "skill_contexts", {}
+                ).get(labels.get(key, key)),
             }
             for job_id in cited_jobs
         ]
@@ -108,6 +165,9 @@ def investigate_career_evidence(candidate, results: list[dict], records: list[di
                 "Inspect the cited vacancy descriptions and evidence methods, "
                 "confirm whether the skill is mandatory, and add truthful project "
                 "evidence or develop the skill if genuinely needed."
+            ),
+            "hypothesis_investigation": assess_skill_gap_hypotheses(
+                labels.get(key, key), refs
             ),
             "recommended_action": "Add truthful evidence of this skill to your CV, or develop it if needed.",
         })

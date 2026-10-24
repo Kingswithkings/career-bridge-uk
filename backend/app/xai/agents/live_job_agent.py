@@ -24,6 +24,30 @@ def extract_skill_mentions(description: str) -> list[str]:
     ]
 
 
+def extract_skill_contexts(description: str) -> dict[str, str]:
+    """Verify skill mentions against retrieved text and retain short excerpts.
+
+    These excerpts are evidence of mentions, not verified job requirements.
+    """
+    plain = " ".join(
+        unescape(re.sub(r"<[^>]*>", " ", description or "")).split()
+    )
+    contexts = {}
+
+    for skill in extract_skill_mentions(description):
+        match = re.search(
+            r"(?<![\w])" + re.escape(skill) + r"(?![\w])",
+            plain,
+            re.I,
+        )
+        if match:
+            start = max(0, match.start() - 80)
+            end = min(len(plain), match.end() + 80)
+            contexts[skill] = plain[start:end]
+
+    return contexts
+
+
 def retrieve_live_job_evidence(goal: str, *, limit: int = 5, location: str | None = None) -> list[dict]:
     """Read actual Adzuna search results. Does not claim vacancies are independently verified."""
     # Keep the existing application dependency isolated from deterministic/offline tests.
@@ -52,6 +76,9 @@ def retrieve_live_job_evidence(goal: str, *, limit: int = 5, location: str | Non
             "source_type": "live_listing_unverified",
             "evidence_origin": "adzuna",
             "skill_evidence_method": "description_keyword_mentions",
+            "skill_contexts": extract_skill_contexts(
+                job.get("description") or ""
+            ),
             "collected_at": collected,
             "verified_live_vacancy": False,
         })

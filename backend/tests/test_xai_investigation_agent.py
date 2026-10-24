@@ -161,3 +161,105 @@ def test_investigation_explains_synthetic_evidence_limitations():
     assert "labor-market demand" in gap["why_it_matters"]
     assert "omitted" in gap["alternative_explanation"]
     assert "cited vacancy" in gap["verification_action"]
+
+
+def test_hypothesis_investigation_distinguishes_claims():
+    profile = CareerProfile(
+        skills=["Python"],
+        career_goal="AI Engineer",
+    )
+
+    records = [
+        {
+            "job_id": "ADZ-001",
+            "source_type": "live_listing_unverified",
+            "evidence_origin": "adzuna",
+            "source_url": "https://example.org/job/1",
+            "required_skills": ["Docker"],
+            "skill_evidence_method": "description_keyword_mentions",
+        }
+    ]
+
+    results = [
+        {
+            "job_id": "ADZ-001",
+            "evaluation": {"missing_skills": ["Docker"]},
+        }
+    ]
+
+    report = investigate_career_evidence(
+        profile, results, records
+    )
+
+    investigation = report["priority_skill_gaps"][0][
+        "hypothesis_investigation"
+    ]
+
+    assert investigation["live_listing_references"] == 1
+    assert investigation["synthetic_references"] == 0
+
+    assessments = [
+        hypothesis["assessment"]
+        for hypothesis in investigation["hypotheses"]
+    ]
+
+    assert assessments == [
+        "supported_by_profile_comparison",
+        "unverified",
+        "unknown",
+    ]
+
+    assert "mandatory" in investigation["next_evidence_check"]
+
+
+def test_skill_contexts_preserve_retrieved_text():
+    from backend.app.xai.agents.live_job_agent import extract_skill_contexts
+
+    description = (
+        "<p>Our engineering team works with Python and FastAPI.</p> "
+        "<p>Experience with Docker is helpful.</p>"
+    )
+
+    contexts = extract_skill_contexts(description)
+
+    assert "Python" in contexts
+    assert "Docker" in contexts
+    assert "Experience with Docker is helpful." in contexts["Docker"]
+    assert "Azure" not in contexts
+
+
+def test_skill_gap_cites_original_source_excerpt():
+    profile = CareerProfile(
+        skills=["Python"],
+        career_goal="AI Engineer",
+    )
+
+    records = [{
+        "job_id": "ADZ-001",
+        "source_type": "live_listing_unverified",
+        "evidence_origin": "adzuna",
+        "source_url": "https://example.org/job/1",
+        "required_skills": ["Docker"],
+        "skill_contexts": {
+            "Docker": "Experience with Docker is helpful."
+        },
+        "skill_evidence_method": "description_keyword_mentions",
+    }]
+
+    results = [{
+        "job_id": "ADZ-001",
+        "evaluation": {"missing_skills": ["Docker"]},
+    }]
+
+    report = investigate_career_evidence(
+        profile, results, records
+    )
+
+    gap = report["priority_skill_gaps"][0]
+    reference = gap["evidence_references"][0]
+
+    assert reference["source_excerpt"] == (
+        "Experience with Docker is helpful."
+    )
+    assert reference["source_type"] == "live_listing_unverified"
+    assert gap["evidence_strength"] == "unverified_listing_mentions"
