@@ -9,11 +9,21 @@ type EvidenceReference = {
   source_url?: string;
   job_title?: string;
   job_id?: string;
+  source_type?: string;
+  source_excerpt?: string | null;
 };
 
 type SkillGap = {
   skill: string;
   jobs_mentioning_gap: number;
+  live_listings_mentioning_gap?: number;
+  synthetic_examples_mentioning_gap?: number;
+  why_it_matters?: string;
+  alternative_explanation?: string;
+  verification_action?: string;
+  hypothesis_investigation?: {
+    next_evidence_check?: string;
+  };
   evidence_references?: EvidenceReference[];
 };
 
@@ -53,6 +63,13 @@ type XAIResponse = {
     status?: string;
     used?: boolean;
   };
+  nvidia?: {
+    status?: string;
+    used?: boolean;
+    model_reported?: string;
+    advisory_narrative?: string;
+    independently_verified?: boolean;
+  };
 };
 
 const XAI_DEMO_MODE =
@@ -84,6 +101,7 @@ function InvestigationPageContent() {
     "Which evidenced skills should I investigate to improve my career prospects?"
   );
   const [includeLiveJobs, setIncludeLiveJobs] = useState(true);
+  const [includeNvidia, setIncludeNvidia] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [report, setReport] = useState<XAIResponse | null>(null);
@@ -96,6 +114,12 @@ function InvestigationPageContent() {
 
     try {
       const token = localStorage.getItem("token");
+
+      if (includeNvidia && !token) {
+        throw new Error(
+          "Log in with a valid CareerBridge account to use NVIDIA inference."
+        );
+      }
 
       if (!token && !XAI_DEMO_MODE) {
         throw new Error("Your session has expired. Please log in again.");
@@ -112,6 +136,7 @@ function InvestigationPageContent() {
           },
           limit: 10,
           include_live_jobs: includeLiveJobs,
+          include_nvidia_insight: includeNvidia,
           location: location.trim() || null,
           question: question.trim() || null,
         },
@@ -242,6 +267,17 @@ function InvestigationPageContent() {
             mentions are not independently verified.
           </label>
 
+          <label className="flex items-start gap-3 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              checked={includeNvidia}
+              onChange={(event) => setIncludeNvidia(event.target.checked)}
+              className="mt-1 h-4 w-4"
+            />
+            Include an NVIDIA Nemotron AI explanation. Requires login and
+            server permission. This may consume API credits.
+          </label>
+
           <button
             type="submit"
             disabled={loading}
@@ -307,6 +343,32 @@ function InvestigationPageContent() {
                     that the candidate lacks the skill.
                   </p>
 
+                  {gap.why_it_matters && (
+                    <p className="text-sm text-slate-200">
+                      <strong>Why this matters:</strong> {gap.why_it_matters}
+                    </p>
+                  )}
+
+                  <p className="text-sm text-slate-400">
+                    Non-sample references: {gap.live_listings_mentioning_gap ?? 0}
+                    {" | "}
+                    Synthetic references: {gap.synthetic_examples_mentioning_gap ?? 0}
+                  </p>
+
+                  {gap.alternative_explanation && (
+                    <p className="text-sm text-slate-300">
+                      <strong>Alternative explanation:</strong>{" "}
+                      {gap.alternative_explanation}
+                    </p>
+                  )}
+
+                  {gap.hypothesis_investigation?.next_evidence_check && (
+                    <p className="text-sm text-blue-200">
+                      <strong>Next evidence check:</strong>{" "}
+                      {gap.hypothesis_investigation.next_evidence_check}
+                    </p>
+                  )}
+
                   {(gap.evidence_references || []).length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-slate-300">
@@ -329,6 +391,16 @@ function InvestigationPageContent() {
                               {ref.job_title || ref.job_id || "Source link unavailable"}
                             </span>
                           )}
+                          {ref.source_excerpt && (
+                            <blockquote className="mt-2 border-l-2 border-blue-500 pl-3 text-slate-300">
+                              {ref.source_excerpt}
+                            </blockquote>
+                          )}
+                          <p className="mt-1 text-xs text-slate-500">
+                            {ref.source_type === "sample"
+                              ? "Synthetic demonstration evidence"
+                              : "Unverified listing evidence"}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -382,6 +454,36 @@ function InvestigationPageContent() {
                 </p>
               ))}
             </section>
+
+            {report.nvidia && report.nvidia.status !== "not_requested" && (
+              <section className="space-y-4 rounded-2xl border border-blue-800 bg-slate-900 p-6">
+                <h2 className="text-xl font-semibold">
+                  NVIDIA Nemotron AI Explanation
+                </h2>
+
+                <p className="text-sm text-slate-400">
+                  Status: {report.nvidia.status}
+                </p>
+
+                {report.nvidia.model_reported && (
+                  <p className="text-sm text-blue-300">
+                    Model: {report.nvidia.model_reported}
+                  </p>
+                )}
+
+                {report.nvidia.used && report.nvidia.advisory_narrative && (
+                  <p className="whitespace-pre-wrap leading-7 text-slate-200">
+                    {report.nvidia.advisory_narrative}
+                  </p>
+                )}
+
+                <p className="text-xs text-amber-200">
+                  AI-generated advisory interpretation. Independently
+                  verified evidence is not established by this narrative.
+                  Refer to the cited investigation findings above.
+                </p>
+              </section>
+            )}
 
             <section className="rounded-2xl border border-slate-800 bg-slate-900 p-6 space-y-4">
               <h2 className="text-xl font-semibold">Agent execution trace</h2>
