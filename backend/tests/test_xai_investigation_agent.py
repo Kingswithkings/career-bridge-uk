@@ -71,3 +71,93 @@ def test_no_evidence_abstains():
     result = investigate_career_evidence(profile, [], [])
     assert result["priority_skill_gaps"] == []
     assert result["conclusion"].startswith("Insufficient evidence")
+
+
+def test_live_evidence_ranks_ahead_of_synthetic_only_evidence():
+    profile = CareerProfile(
+        skills=["Python"],
+        career_goal="AI Engineer",
+    )
+
+    records = [
+        {
+            "job_id": "DEMO-001",
+            "source_type": "sample",
+            "evidence_origin": "demo",
+            "required_skills": ["Docker"],
+            "source_url": None,
+        },
+        {
+            "job_id": "DEMO-002",
+            "source_type": "sample",
+            "evidence_origin": "demo",
+            "required_skills": ["Docker"],
+            "source_url": None,
+        },
+        {
+            "job_id": "ADZ-001",
+            "source_type": "live_listing_unverified",
+            "evidence_origin": "adzuna",
+            "required_skills": ["GCP"],
+            "source_url": "https://example.org/job/1",
+            "skill_evidence_method": "description_keyword_mentions",
+        },
+    ]
+
+    results = [
+        {
+            "job_id": record["job_id"],
+            "evaluation": {
+                "missing_skills": record["required_skills"]
+            },
+        }
+        for record in records
+    ]
+
+    report = investigate_career_evidence(
+        profile,
+        results,
+        records,
+    )
+
+    gaps = report["priority_skill_gaps"]
+
+    assert gaps[0]["skill"] == "GCP"
+    assert gaps[0]["live_listings_mentioning_gap"] == 1
+    assert gaps[0]["synthetic_examples_mentioning_gap"] == 0
+
+    assert gaps[1]["skill"] == "Docker"
+    assert gaps[1]["live_listings_mentioning_gap"] == 0
+    assert gaps[1]["synthetic_examples_mentioning_gap"] == 2
+
+
+def test_investigation_explains_synthetic_evidence_limitations():
+    profile = CareerProfile(
+        skills=["Python"],
+        career_goal="AI Engineer",
+    )
+
+    records = [{
+        "job_id": "DEMO-001",
+        "source_type": "sample",
+        "evidence_origin": "demo",
+        "required_skills": ["Docker"],
+        "source_url": None,
+    }]
+
+    results = [{
+        "job_id": "DEMO-001",
+        "evaluation": {"missing_skills": ["Docker"]},
+    }]
+
+    report = investigate_career_evidence(
+        profile, results, records
+    )
+
+    gap = report["priority_skill_gaps"][0]
+
+    assert gap["evidence_strength"] == "synthetic_only"
+    assert "synthetic" in gap["why_it_matters"]
+    assert "labor-market demand" in gap["why_it_matters"]
+    assert "omitted" in gap["alternative_explanation"]
+    assert "cited vacancy" in gap["verification_action"]

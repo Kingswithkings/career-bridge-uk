@@ -69,14 +69,55 @@ def investigate_career_evidence(candidate, results: list[dict], records: list[di
             }
             for job_id in cited_jobs
         ]
+        live_count = sum(
+            by_id[job_id].get("source_type") != "sample"
+            for job_id in cited_jobs
+        )
+        sample_count = len(cited_jobs) - live_count
+
         priorities.append({
             "skill": labels.get(key, key),
             "jobs_mentioning_gap": len(cited_jobs),
+            "live_listings_mentioning_gap": live_count,
+            "synthetic_examples_mentioning_gap": sample_count,
+            "evidence_strength": (
+                "unverified_listing_mentions"
+                if live_count
+                else "synthetic_only"
+            ),
             "source_providers": sorted(matches["origins"]),
             "evidence_references": refs,
+            "why_it_matters": (
+                f"The submitted candidate profile does not document {labels.get(key, key)}. "
+                f"It appears in {live_count} non-sample job record(s) and "
+                f"{sample_count} synthetic demonstration record(s). "
+                "Non-sample records are not automatically verified vacancies, "
+                "and skill mentions do not prove mandatory requirements."
+                if live_count
+                else
+                f"The submitted candidate profile does not document {labels.get(key, key)}, "
+                f"but this finding is based only on {sample_count} synthetic "
+                "demonstration record(s). It cannot establish real labor-market demand."
+            ),
+            "alternative_explanation": (
+                "The candidate may possess this skill but have omitted it from "
+                "their profile. A listing may also mention the skill as optional "
+                "rather than mandatory."
+            ),
+            "verification_action": (
+                "Inspect the cited vacancy descriptions and evidence methods, "
+                "confirm whether the skill is mandatory, and add truthful project "
+                "evidence or develop the skill if genuinely needed."
+            ),
             "recommended_action": "Add truthful evidence of this skill to your CV, or develop it if needed.",
         })
-    priorities.sort(key=lambda p: (-p["jobs_mentioning_gap"], p["skill"].casefold()))
+    priorities.sort(
+        key=lambda p: (
+            -p["live_listings_mentioning_gap"],
+            -p["jobs_mentioning_gap"],
+            p["skill"].casefold(),
+        )
+    )
     review = critique_sources(records)
     if not records:
         conclusion = "Insufficient evidence to assess the target career goal."
