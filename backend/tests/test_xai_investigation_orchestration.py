@@ -27,7 +27,9 @@ LIVE = {
 
 def setup_offline(monkeypatch):
     audits = []
-    monkeypatch.setattr(orchestrator, "retrieve_job_evidence", lambda limit: [SAMPLE.copy()])
+    monkeypatch.setattr(
+        orchestrator, "retrieve_job_evidence", lambda limit: [SAMPLE.copy()]
+    )
     monkeypatch.setattr(
         orchestrator,
         "build_meterless_graph",
@@ -37,7 +39,9 @@ def setup_offline(monkeypatch):
             "evidence_graph": {"jobs": [], "relationship_count": 0},
         },
     )
-    monkeypatch.setattr(orchestrator, "write_xai_audit", lambda response: audits.append(response))
+    monkeypatch.setattr(
+        orchestrator, "write_xai_audit", lambda response: audits.append(response)
+    )
     monkeypatch.setattr(
         orchestrator,
         "request_nightshift_insight",
@@ -49,7 +53,9 @@ def setup_offline(monkeypatch):
 def test_opt_in_adds_second_source_and_preserves_uncertainty(monkeypatch):
     audits = setup_offline(monkeypatch)
     monkeypatch.setattr(
-        orchestrator, "retrieve_live_job_evidence", lambda *args, **kwargs: [LIVE.copy()]
+        orchestrator,
+        "retrieve_live_job_evidence",
+        lambda *args, **kwargs: [LIVE.copy()],
     )
     candidate = CareerProfile(skills=["Python"], career_goal="AI Engineer")
     result = orchestrator.run_careerbridge_xai(
@@ -58,10 +64,17 @@ def test_opt_in_adds_second_source_and_preserves_uncertainty(monkeypatch):
     assert result["jobs_evaluated"] == 2
     assert result["agent_trace"][1]["records_added"] == 1
     assert result["investigation"]["source_critique"]["provider_count"] == 2
-    assert result["investigation"]["source_critique"]["sufficient_for_cross_source_inference"] is False
+    assert (
+        result["investigation"]["source_critique"][
+            "sufficient_for_cross_source_inference"
+        ]
+        is False
+    )
     assert result["investigation"]["question"] == "Why?"
     assert result["results"][1]["evaluation"]["verified_live_vacancy"] is False
-    assert result["results"][1]["evaluation"]["metric_label"] == "skill mention coverage"
+    assert (
+        result["results"][1]["evaluation"]["metric_label"] == "skill mention coverage"
+    )
     assert "keyword mentions" in " ".join(
         result["results"][1]["evaluation"]["evidence_warnings"]
     )
@@ -81,9 +94,12 @@ def test_live_source_failure_is_logged_without_fabricating_data(monkeypatch):
     )
     assert result["jobs_evaluated"] == 1
     assert result["agent_trace"][1]["status"] == "unavailable"
-    assert result["investigation"]["source_critique"][
-        "sufficient_for_cross_source_inference"
-    ] is False
+    assert (
+        result["investigation"]["source_critique"][
+            "sufficient_for_cross_source_inference"
+        ]
+        is False
+    )
 
 
 def test_default_does_not_call_live_source(monkeypatch):
@@ -115,9 +131,7 @@ def test_nvidia_inference_requires_explicit_opt_in(monkeypatch):
             "independently_verified": False,
         }
 
-    monkeypatch.setattr(
-        orchestrator, "request_nvidia_insight", fake_nvidia
-    )
+    monkeypatch.setattr(orchestrator, "request_nvidia_insight", fake_nvidia)
 
     candidate = CareerProfile(
         skills=["Python"],
@@ -140,7 +154,40 @@ def test_nvidia_inference_requires_explicit_opt_in(monkeypatch):
     assert enabled["nvidia"]["independently_verified"] is False
 
     assert any(
-        step["step"] == "nvidia_inference"
-        and step["status"] == "success"
+        step["step"] == "nvidia_inference" and step["status"] == "success"
         for step in enabled["agent_trace"]
     )
+
+
+def test_live_only_ignores_demo_records(monkeypatch):
+    setup_offline(monkeypatch)
+    monkeypatch.setenv("CAREERBRIDGE_XAI_DEMO_MODE", "true")
+
+    def reject_samples(*args, **kwargs):
+        raise AssertionError("Sample retrieval must not run")
+
+    monkeypatch.setattr(orchestrator, "retrieve_demo_job_evidence", reject_samples)
+    monkeypatch.setattr(orchestrator, "retrieve_job_evidence", reject_samples)
+    monkeypatch.setattr(
+        orchestrator, "retrieve_live_job_evidence", lambda *a, **kw: [LIVE.copy()]
+    )
+    result = orchestrator.run_careerbridge_xai(
+        CareerProfile(skills=["Python"], career_goal="AI Engineer"),
+        require_live_evidence=True,
+    )
+    assert result["jobs_evaluated"] == 1
+    assert result["investigation"]["source_critique"]["sample_count"] == 0
+
+
+def test_live_only_rejects_empty_provider_results(monkeypatch):
+    import pytest
+
+    setup_offline(monkeypatch)
+    monkeypatch.setattr(orchestrator, "retrieve_live_job_evidence", lambda *a, **kw: [])
+    with pytest.raises(
+        orchestrator.LiveEvidenceUnavailable, match="No sample data was used"
+    ):
+        orchestrator.run_careerbridge_xai(
+            CareerProfile(skills=["Python"], career_goal="AI Engineer"),
+            require_live_evidence=True,
+        )

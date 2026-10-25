@@ -4,15 +4,25 @@ from uuid import uuid4
 
 from backend.app.xai.schemas import CareerProfile, JobEvidence
 from backend.app.xai.agents.career_planning import analyse_career_profile
-from backend.app.xai.agents.evidence_agent import retrieve_job_evidence, retrieve_demo_job_evidence
+from backend.app.xai.agents.evidence_agent import (
+    retrieve_job_evidence,
+    retrieve_demo_job_evidence,
+)
 from backend.app.xai.agents.evaluation_agent import evaluate_job_match
 from backend.app.xai.agents.explanation_agent import explain_job_match
-from backend.app.xai.agents.investigation_agent import critique_sources, investigate_career_evidence
+from backend.app.xai.agents.investigation_agent import (
+    critique_sources,
+    investigate_career_evidence,
+)
 from backend.app.xai.agents.live_job_agent import retrieve_live_job_evidence
 from backend.app.xai.integrations.meterless_client import build_meterless_graph
 from backend.app.xai.integrations.nightshift_runtime import request_nightshift_insight
 from backend.app.xai.integrations.nvidia_nemotron import request_nvidia_insight
 from backend.app.xai.tracing.audit import write_xai_audit
+
+
+class LiveEvidenceUnavailable(RuntimeError):
+    """No usable live job evidence could be retrieved."""
 
 
 def run_careerbridge_xai(
@@ -23,6 +33,7 @@ def run_careerbridge_xai(
     location: str | None = None,
     question: str | None = None,
     include_nvidia_insight: bool = False,
+    require_live_evidence: bool = False,
 ) -> dict:
     """Investigate job evidence, optionally enrich it, critique and explain it.
 
@@ -32,19 +43,31 @@ def run_careerbridge_xai(
     run_id = str(uuid4())
     import os
 
-    demo_mode = (
-        os.getenv("CAREERBRIDGE_XAI_DEMO_MODE", "").lower()
-        in {"true", "1", "yes"}
-    )
+    demo_mode = os.getenv("CAREERBRIDGE_XAI_DEMO_MODE", "").lower() in {
+        "true",
+        "1",
+        "yes",
+    }
+
+    if require_live_evidence:
+        include_live_jobs = True
 
     records = (
-        retrieve_demo_job_evidence(limit=limit)
-        if demo_mode
-        else retrieve_job_evidence(limit=limit)
+        []
+        if require_live_evidence
+        else (
+            retrieve_demo_job_evidence(limit=limit)
+            if demo_mode
+            else retrieve_job_evidence(limit=limit)
+        )
     )
     trace = [
         {
-            "step": "retrieve_demo_evidence" if demo_mode else "retrieve_zetaris",
+            "step": (
+                "live_evidence_only"
+                if require_live_evidence
+                else ("retrieve_demo_evidence" if demo_mode else "retrieve_zetaris")
+            ),
             "status": "completed",
             "records": len(records),
             "source_critique": critique_sources(records)["limitations"],
@@ -56,7 +79,8 @@ def run_careerbridge_xai(
         # Deliberate branching: the critic determines whether to investigate
         # another source; user opt-in permits exactly one live enrichment pass.
         reason = (
-            "source_gap_identified" if initial_review["needs_additional_source"]
+            "source_gap_identified"
+            if initial_review["needs_additional_source"]
             else "user_requested_live_enrichment"
         )
         try:
@@ -69,33 +93,55 @@ def run_careerbridge_xai(
             }
             added = 0
             for record in live_records:
-                identity = (str(record.get("source_url") or ""), str(record.get("job_id") or ""))
+                identity = (
+                    str(record.get("source_url") or ""),
+                    str(record.get("job_id") or ""),
+                )
                 if identity not in existing:
                     records.append(record)
                     existing.add(identity)
                     added += 1
-            trace.append({
-                "step": "enrich_adzuna",
-                "status": "completed",
-                "reason": reason,
-                "records_added": added,
-                "max_attempts": 1,
-            })
+            trace.append(
+                {
+                    "step": "enrich_adzuna",
+                    "status": "completed",
+                    "reason": reason,
+                    "records_added": added,
+                    "max_attempts": 1,
+                }
+            )
         except Exception as error:
             # Do not leak provider responses, authentication keys or private URLs.
-            trace.append({
-                "step": "enrich_adzuna",
-                "status": "unavailable",
-                "reason": reason,
-                "error_type": type(error).__name__,
-                "max_attempts": 1,
-            })
+            trace.append(
+                {
+                    "step": "enrich_adzuna",
+                    "status": "unavailable",
+                    "reason": reason,
+                    "error_type": type(error).__name__,
+                    "max_attempts": 1,
+                }
+            )
     else:
-        trace.append({
-            "step": "enrich_adzuna",
-            "status": "not_requested",
-            "reason": "Live job lookups require explicit opt-in.",
-        })
+        trace.append(
+            {
+                "step": "enrich_adzuna",
+                "status": "not_requested",
+                "reason": "Live job lookups require explicit opt-in.",
+            }
+        )
+
+    if require_live_evidence:
+        records = [
+            record
+            for record in records
+            if record.get("source_type") == "live_listing_unverified"
+            and record.get("source_url")
+        ]
+        if not records:
+            raise LiveEvidenceUnavailable(
+                "No usable live job evidence is available. Check the job-search "
+                "provider configuration or try a broader career goal. No sample data was used."
+            )
 
     meterless = build_meterless_graph(records)
     results = []
@@ -113,43 +159,53 @@ def run_careerbridge_xai(
             job,
             evidence_origin=record["evidence_origin"],
             source_type=record["source_type"],
-            skill_evidence_method=record.get("skill_evidence_method", "source_requirements"),
+            skill_evidence_method=record.get(
+                "skill_evidence_method", "source_requirements"
+            ),
         )
         explanation = explain_job_match(evaluation)
-        results.append({
-            "job_id": job.job_id,
-            "career_analysis": career_analysis,
-            "evaluation": evaluation,
-            "explanation": explanation,
-        })
+        results.append(
+            {
+                "job_id": job.job_id,
+                "career_analysis": career_analysis,
+                "evaluation": evaluation,
+                "explanation": explanation,
+            }
+        )
 
     investigation = investigate_career_evidence(
         candidate, results, records, question=question
     )
-    trace.append({
-        "step": "evaluate_evidence",
-        "status": "completed",
-        "cross_source_supported": investigation["source_critique"][
-            "sufficient_for_cross_source_inference"
-        ],
-        "remaining_limitations": investigation["source_critique"]["limitations"],
-    })
+    trace.append(
+        {
+            "step": "evaluate_evidence",
+            "status": "completed",
+            "cross_source_supported": investigation["source_critique"][
+                "sufficient_for_cross_source_inference"
+            ],
+            "remaining_limitations": investigation["source_critique"]["limitations"],
+        }
+    )
     nightshift = request_nightshift_insight(investigation)
-    trace.append({
-        "step": "nightshift_inference",
-        "status": nightshift["status"],
-        "used": nightshift["used"],
-    })
+    trace.append(
+        {
+            "step": "nightshift_inference",
+            "status": nightshift["status"],
+            "used": nightshift["used"],
+        }
+    )
     nvidia = (
         request_nvidia_insight(investigation)
         if include_nvidia_insight
         else {"status": "not_requested", "used": False}
     )
-    trace.append({
-        "step": "nvidia_inference",
-        "status": nvidia["status"],
-        "used": nvidia["used"],
-    })
+    trace.append(
+        {
+            "step": "nvidia_inference",
+            "status": nvidia["status"],
+            "used": nvidia["used"],
+        }
+    )
 
     response = {
         "run_id": run_id,

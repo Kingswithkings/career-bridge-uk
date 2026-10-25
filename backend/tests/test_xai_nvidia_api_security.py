@@ -41,9 +41,7 @@ def test_nvidia_api_requires_authentication(monkeypatch):
     assert response.status_code == 401
 
 
-def test_authenticated_nvidia_request_reaches_orchestrator(
-    monkeypatch, tmp_path
-):
+def test_authenticated_nvidia_request_reaches_orchestrator(monkeypatch, tmp_path):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
 
@@ -98,9 +96,7 @@ def test_authenticated_nvidia_request_reaches_orchestrator(
     app.include_router(xai_routes.router)
     app.dependency_overrides[get_db] = override_db
 
-    token = create_access_token(
-        {"sub": "xai-test@example.com"}
-    )
+    token = create_access_token({"sub": "xai-test@example.com"})
 
     try:
         with TestClient(app) as client:
@@ -116,3 +112,31 @@ def test_authenticated_nvidia_request_reaches_orchestrator(
         assert response.json()["nvidia"]["status"] == "mocked_success"
     finally:
         engine.dispose()
+
+
+def test_capabilities_require_both_flags_and_key(monkeypatch):
+    monkeypatch.delenv("XAI_ENABLE_NVIDIA_API", raising=False)
+    monkeypatch.setenv("XAI_ENABLE_NVIDIA", "true")
+    monkeypatch.setenv("NVIDIA_API_KEY", "test-only-secret")
+    client = make_client()
+    assert client.get("/api/xai/capabilities").json() == {"nvidia_available": False}
+    monkeypatch.setenv("XAI_ENABLE_NVIDIA_API", "true")
+    assert client.get("/api/xai/capabilities").json() == {"nvidia_available": True}
+    monkeypatch.delenv("NVIDIA_API_KEY")
+    assert client.get("/api/xai/capabilities").json() == {"nvidia_available": False}
+
+
+def test_live_only_api_rejects_false():
+    import pytest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        xai_routes.XAIRunRequest.model_validate(
+            {
+                "candidate": {
+                    "skills": ["Python"],
+                    "career_goal": "AI Engineer",
+                },
+                "include_live_jobs": False,
+            }
+        )

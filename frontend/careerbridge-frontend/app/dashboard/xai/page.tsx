@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import AuthGate from "@/components/AuthGate";
-import { apiPost } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 
 type EvidenceReference = {
   source_url?: string;
@@ -100,8 +100,17 @@ function InvestigationPageContent() {
   const [question, setQuestion] = useState(
     "Which evidenced skills should I investigate to improve my career prospects?"
   );
-  const [includeLiveJobs, setIncludeLiveJobs] = useState(true);
   const [includeNvidia, setIncludeNvidia] = useState(false);
+  const [nvidiaAvailable, setNvidiaAvailable] = useState(false);
+  useEffect(() => {
+    let active = true;
+    apiGet("/api/xai/capabilities")
+      .then((capabilities) => {
+        if (active) setNvidiaAvailable(capabilities.nvidia_available === true);
+      })
+      .catch(() => { /* Keep optional inference disabled if availability is unknown. */ });
+    return () => { active = false; };
+  }, []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [report, setReport] = useState<XAIResponse | null>(null);
@@ -115,7 +124,7 @@ function InvestigationPageContent() {
     try {
       const token = localStorage.getItem("token");
 
-      if (includeNvidia && !token) {
+      if (includeNvidia && nvidiaAvailable && !token) {
         throw new Error(
           "Log in with a valid CareerBridge account to use NVIDIA inference."
         );
@@ -135,8 +144,8 @@ function InvestigationPageContent() {
             experience_years: Number(experience),
           },
           limit: 10,
-          include_live_jobs: includeLiveJobs,
-          include_nvidia_insight: includeNvidia,
+          include_live_jobs: true,
+          include_nvidia_insight: includeNvidia && nvidiaAvailable,
           location: location.trim() || null,
           question: question.trim() || null,
         },
@@ -256,26 +265,22 @@ function InvestigationPageContent() {
             </label>
           </div>
 
-          <label className="flex items-start gap-3 text-sm text-slate-300">
-            <input
-              type="checkbox"
-              checked={includeLiveJobs}
-              onChange={(event) => setIncludeLiveJobs(event.target.checked)}
-              className="mt-1 h-4 w-4"
-            />
-            Include live Adzuna job-search results. Listing details and skill
-            mentions are not independently verified.
-          </label>
+          <p className="text-sm text-slate-300">
+            Investigations use live Adzuna job listings only. No sample jobs are
+            used. Listing details and skill mentions are not independently verified.
+          </p>
 
           <label className="flex items-start gap-3 text-sm text-slate-300">
             <input
               type="checkbox"
-              checked={includeNvidia}
+              checked={includeNvidia && nvidiaAvailable}
+              disabled={!nvidiaAvailable || loading}
               onChange={(event) => setIncludeNvidia(event.target.checked)}
               className="mt-1 h-4 w-4"
             />
-            Include an NVIDIA Nemotron AI explanation. Requires login and
-            server permission. This may consume API credits.
+            {nvidiaAvailable
+              ? "Include an NVIDIA Nemotron AI explanation. Requires login and may consume API credits."
+              : "NVIDIA explanations are unavailable. You can still investigate live job evidence."}
           </label>
 
           <button
@@ -439,7 +444,12 @@ function InvestigationPageContent() {
               ))}
 
               <p className="text-sm text-slate-400">
-                Some records are synthetic demonstrations. Live Adzuna listings
+                {critique?.sample_count === 0
+                  ? "No synthetic demonstration records were used. "
+                  : (critique?.sample_count ?? 0) > 0
+                    ? "Some records are synthetic demonstrations. "
+                    : "The sample record count was not reported. "}
+                Live Adzuna listings
                 are not independently verified, and extracted keywords are
                 not confirmed employer requirements.
               </p>
