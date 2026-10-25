@@ -1,150 +1,215 @@
 # CareerBridge XAI
-
 ## Explainable Career Intelligence Agent
 
-CareerBridge XAI extends CareerBridge UK with an
-explainable, multi-agent career intelligence workflow.
+CareerBridge XAI extends CareerBridge UK with an evidence-grounded
+career investigation workflow. It retrieves job listings, constructs
+an evidence graph, evaluates skill mentions, critiques source quality,
+and produces transparent recommendations.
 
-It evaluates required-skill coverage, identifies skill
-gaps, explains matching results, and records evidence
-provenance for auditing.
+Developed for Open Agent Hackathon 2026, Track 2:
+Agent That Can Explain Why.
 
 ## Architecture
 
-FastAPI
-  -> Zetaris Evidence Agent
-  -> Meterless World Model
-  -> Career Planning Agent
-  -> Evaluation Agent
-  -> Explanation Agent
-  -> API Response and JSONL Audit
+Next.js dashboard
+    |
+    v
+FastAPI /api/xai/run
+    |
+    v
+Live Adzuna Job Evidence Agent
+    |
+    v
+Meterless World Model
+(job-to-skill relationships and source provenance)
+    |
+    v
+Career Planning and Evaluation Agents
+    |
+    v
+Investigation and Source Critique Agent
+    |
+    +--> Evidence references and alternative explanations
+    |
+    +--> Optional NVIDIA Nemotron advisory explanation
+    |
+    v
+Dashboard response, execution trace and JSONL audit
 
 ## Technology
 
-- Python 3.11 and FastAPI
-- PostgreSQL and Zetaris JDBC
+- Next.js and React frontend
+- Python 3.11 and FastAPI backend
+- Adzuna job search API
 - Meterless World Model (TypeScript)
-- Node.js and tsx
+- NVIDIA Nemotron through NVIDIA hosted inference API
+- SQLite or PostgreSQL application database
 - Pydantic and pytest
+
+## Live Evidence Policy
+
+The public XAI investigation endpoint requires live job evidence.
+
+- The API retrieves Adzuna job-search records.
+- Listings must provide usable source URLs and skill mentions.
+- No synthetic records are substituted if live retrieval fails.
+- Missing usable live evidence produces HTTP 503.
+- Job-description keyword mentions are not verified requirements.
+- A skill missing from the submitted candidate profile does not
+  establish that the candidate lacks the skill.
+- Cross-provider corroboration is not claimed when only Adzuna
+  evidence is represented.
+
+The Zetaris adapter and synthetic demonstration remain separate
+development and testing capabilities; they are not the source of
+records in the demonstrated live-only API workflow.
 
 ## API
 
-Endpoint: POST /api/xai/run
+POST /api/xai/run
 
-Request fields:
-- candidate.skills
-- candidate.experience_years
-- candidate.education
+Key request fields:
+
 - candidate.career_goal
-- limit (default: 3)
+- candidate.skills
+- candidate.education
+- candidate.experience_years
+- limit
+- include_live_jobs: true
+- location (optional)
+- question (optional)
+- include_nvidia_insight: false by default
 
-The response contains:
-- A unique run ID
-- Career analysis
-- Job matching evaluations
-- Human-readable explanations
+The response includes:
+
+- Investigation ID
+- Evaluated job records
 - Meterless evidence graph
+- Skill-gap hypotheses and source references
+- Alternative explanations and verification actions
+- Source-quality critique
+- Agent execution trace
+- Optional NVIDIA advisory narrative
 
-Match percentages represent required-skill coverage,
-not hiring probabilities.
+GET /api/xai/capabilities returns whether optional NVIDIA
+inference is configured and enabled, without returning credentials.
 
-## Reproducible demonstration
+## NVIDIA Nemotron
 
-Three synthetic job records are included in
-docs/careerbridge-xai/sample_jobs.json.
+The verified hosted model is:
 
-From the repository root, install dependencies:
+nvidia/nemotron-3.5-lightning-30b-a3b
 
-cd backend/app/xai/integrations/meterless
-npm ci
+NVIDIA explanations are optional, not independent verification.
+Model output does not change the underlying evidence records.
 
-Return to the repository root:
+NVIDIA API requests require a valid application login and
+XAI_ENABLE_NVIDIA_API=true. The inference adapter additionally
+requires XAI_ENABLE_NVIDIA=true and NVIDIA_API_KEY.
 
-cd ../../../../..
+Do not enable hosted paid inference publicly without suitable
+usage quotas, abuse protection and monitoring.
 
-Run the Meterless demonstration:
+Never commit API keys, tokens or .env files.
 
-backend/app/xai/integrations/meterless/node_modules/.bin/tsx backend/app/xai/integrations/meterless/bridge.ts docs/careerbridge-xai/sample_jobs.json
+## Local Development
 
-Expected:
-- 3 jobs processed
-- 12 job-to-skill relationships
-- 3 unchanged records skipped on second ingestion
+Run the FastAPI backend from the repository root with its Python
+dependencies installed and application database configured:
 
-## Zetaris configuration
+    python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8001
 
-The full API requires a running Zetaris JDBC service
-connected to the CAREERBRIDGE_XAI.job_evidence table.
+Run the frontend separately:
 
-Required environment variables:
+    cd frontend/careerbridge-frontend
+    npm ci
+    npm run dev -- --webpack --port 3000
 
-- ZETARIS_JDBC_URL
-- ZETARIS_USERNAME
-- ZETARIS_PASSWORD
-- ZETARIS_JDBC_DRIVER_PATH
+For local development, configure the frontend API base URL as:
 
-Never commit credentials or local .env files.
+    NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8001
 
-The existing CareerBridge application also requires
-its database configuration.
+Set Adzuna credentials in the backend's private configuration:
 
-## Automated testing
+- ADZUNA_APP_ID
+- ADZUNA_APP_KEY
 
-Activate the Python environment and run:
+The browser demonstration is at /dashboard/xai.
 
-python -m pytest backend/tests/test_xai_*.py -q
+## Offline Reproducible Demonstration
 
-Latest verified result: 25 tests passed.
+The repository also contains synthetic sample job records at:
 
-## Evidence and limitations
+docs/careerbridge-xai/sample_jobs.json
 
-The DEMO-* job records are synthetic examples,
-not verified live employment opportunities.
+These records are examples, not live or verified vacancies.
 
-Matching scores measure required-skill coverage.
-They do not predict hiring decisions or overall
-candidate suitability.
+From the repository root:
 
-Meterless records job-to-skill relationships and
-source provenance. JSONL audit entries capture
-run IDs, evaluations and evidence metadata.
+    cd backend/app/xai/integrations/meterless
+    npm ci
+    cd ../../../../..
+    ./docs/careerbridge-xai/demo/run_all.sh
 
-The offline Meterless demonstration is reproducible
-from the included sample data.
+The offline demonstration exercises Meterless graph ingestion and
+explainable matching without depending on live Adzuna retrieval.
 
-The complete API was verified locally using Zetaris,
-but a fresh-environment Zetaris installation and
-hosted deployment have not yet been validated.
+The Meterless bridge distinguishes source origins including
+Adzuna, Zetaris and synthetic demo records.
 
-## Licensing and prior work
+## Testing
 
-CareerBridge UK existed before this hackathon.
+From the repository root, with the Python environment active:
 
-The Meterless World Model reference source is
-vendored under its declared Apache-2.0 licence.
+    python -m pytest backend/tests/test_xai_*.py -q
+    git diff --check
 
-See:
+Latest reported validation: 50 Python tests passed.
+
+A separate local Meterless provenance check also passed with:
+- 2 input records
+- 3 job-to-skill relationships
+- Correct Adzuna and demo source labels
+
+## Demonstrated Results
+
+A successful local browser investigation evaluated:
+
+- 8 live Adzuna job records
+- 12 evidence relationships
+- 0 synthetic records
+- 3 preliminary skill-gap hypotheses
+- Successful optional NVIDIA Nemotron inference
+
+These figures describe one observed run, not a fixed system output.
+Live search results can change.
+
+Independent cross-provider corroboration was not established.
+
+## Audit and Evidence Limitations
+
+The system records execution metadata, evaluations and evidence
+provenance in a JSONL audit log.
+
+Match scores reflect the implemented skill-coverage logic. They
+are not hiring probabilities, confirmed employer decisions or
+guarantees of candidate suitability.
+
+Adzuna listing excerpts are unverified third-party source content.
+NVIDIA output is an advisory interpretation of supplied evidence.
+
+A fresh public deployment of the full XAI workflow has not yet
+been validated as part of this local demonstration.
+
+## Prior Work and Licensing
+
+CareerBridge UK predates this hackathon.
+
+The Meterless World Model reference source is vendored under its
+declared Apache-2.0 license. See:
+
 backend/app/xai/integrations/meterless/vendor/LICENSE
 backend/app/xai/integrations/meterless/vendor/UPSTREAM.md
 
-CareerBridge XAI adds the integration adapters,
-career agents, orchestration and explanations.
-
-## Combined offline hackathon demonstration
-
-Install Meterless dependencies as documented above.
-
-From the repository root, with Python dependencies installed:
-
-    ./docs/careerbridge-xai/demo/run_all.sh
-
-The demonstration shows:
-- Meterless job-to-skill evidence graph and provenance
-- Idempotent ingestion of three synthetic job records
-- Required-skill coverage calculations
-- Matched and missing skills
-- Human-readable explanations
-
-The offline demonstration does not require Zetaris.
-The full FastAPI endpoint uses Zetaris separately.
-All sample job records are synthetic.
+CareerBridge XAI adds evidence-source integrations, investigation
+orchestration, explainability, provenance and the dashboard.
