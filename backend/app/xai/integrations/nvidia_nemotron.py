@@ -28,20 +28,22 @@ def request_nvidia_insight(investigation: dict) -> dict:
     findings = []
     for gap in investigation.get("priority_skill_gaps", [])[:3]:
         refs = gap.get("evidence_references", [])[:3]
-        findings.append({
-            "skill": gap.get("skill"),
-            "why_it_matters": gap.get("why_it_matters"),
-            "live_references": gap.get("live_listings_mentioning_gap", 0),
-            "synthetic_references": gap.get("synthetic_examples_mentioning_gap", 0),
-            "references": [
-                {
-                    "job_id": ref.get("job_id"),
-                    "source_type": ref.get("source_type"),
-                    "excerpt": (ref.get("source_excerpt") or "")[:200],
-                }
-                for ref in refs
-            ],
-        })
+        findings.append(
+            {
+                "skill": gap.get("skill"),
+                "why_it_matters": gap.get("why_it_matters"),
+                "live_references": gap.get("live_listings_mentioning_gap", 0),
+                "synthetic_references": gap.get("synthetic_examples_mentioning_gap", 0),
+                "references": [
+                    {
+                        "job_id": ref.get("job_id"),
+                        "source_type": ref.get("source_type"),
+                        "excerpt": (ref.get("source_excerpt") or "")[:200],
+                    }
+                    for ref in refs
+                ],
+            }
+        )
 
     evidence = {
         "question": investigation.get("question"),
@@ -72,7 +74,11 @@ def request_nvidia_insight(investigation: dict) -> dict:
                         "referring to listing evidence. Distinguish synthetic "
                         "records from unverified live listings. Do not invent "
                         "jobs, requirements, statistics, candidate abilities, "
-                        "or employer rejection reasons. State uncertainty."
+                        "or employer rejection reasons. State uncertainty. "
+                        "Use plain text without Markdown characters such as "
+                        "asterisks or heading markers. Separate ideas into "
+                        "short paragraphs. A skill missing from the submitted "
+                        "profile is not proof that the candidate lacks it."
                     ),
                 },
                 {
