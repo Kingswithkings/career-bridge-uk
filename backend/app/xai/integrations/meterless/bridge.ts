@@ -8,6 +8,9 @@ type JobRecord = {
   required_skills: string[];
   collected_at: string;
   source_type: string;
+  evidence_origin?: string;
+  retrieval_channel?: string;
+  evidence_freshness?: string;
   source_url?: string | null;
 };
 
@@ -34,8 +37,17 @@ async function main() {
   const observations = jobs.map((job) => {
     const at = new Date(job.collected_at).toISOString();
 
+    const origin =
+      job.evidence_origin === "adzuna" ||
+      job.evidence_origin === "zetaris" ||
+      job.evidence_origin === "demo"
+        ? job.evidence_origin
+        : job.source_type === "sample"
+          ? "demo"
+          : "unknown";
+
     return {
-      externalId: `zetaris:${job.job_id}`,
+      externalId: `${origin}:${job.job_id}`,
       type: "job",
       title: job.job_title,
       text: JSON.stringify({
@@ -47,7 +59,12 @@ async function main() {
       at,
       source: {
         kind: "pipeline" as const,
-        by: "careerbridge-zetaris-evidence-agent",
+        by:
+          origin === "adzuna" &&
+          job.retrieval_channel === "zetaris" &&
+          job.evidence_freshness === "stored_snapshot"
+            ? "careerbridge-adzuna-zetaris-snapshot-evidence-agent"
+            : `careerbridge-${origin}-evidence-agent`,
         at,
         ...(job.source_url ? { url: job.source_url } : {}),
       },

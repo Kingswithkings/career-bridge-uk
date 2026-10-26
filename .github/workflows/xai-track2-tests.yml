@@ -1,0 +1,44 @@
+name: CareerBridge XAI Track 2
+
+on:
+  pull_request:
+    branches:
+      - feature/careerbridge-xai
+    paths:
+      - "backend/app/xai/**"
+      - "backend/app/api/routes/xai_routes.py"
+      - "backend/tests/test_xai_*.py"
+      - "docs/careerbridge-xai/**"
+      - ".github/workflows/xai-track2-tests.yml"
+  push:
+    branches:
+      - feature/xai-track2-investigation-20261023
+  workflow_dispatch:
+
+jobs:
+  investigation-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt pytest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Meterless World Model bridge dependencies
+        working-directory: backend/app/xai/integrations/meterless
+        run: npm ci
+      - name: Compile XAI Python source
+        run: python -m compileall -q backend/app/xai
+      - name: Run XAI tests (offline, no credentials)
+        run: python -m pytest backend/tests/test_xai_*.py -q
+      - name: Run honest sample-only demo
+        run: PYTHONPATH=. python docs/careerbridge-xai/demo/run_matching.py
