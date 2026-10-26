@@ -294,3 +294,57 @@ def test_source_critic_identifies_zetaris_snapshots():
         "historical evidence" in limitation and "currently open" in limitation
         for limitation in review["limitations"]
     )
+
+
+def test_historical_snapshot_gap_not_counted_as_fresh_listing():
+    profile = CareerProfile(
+        skills=["Python"],
+        career_goal="Machine Learning Engineer",
+    )
+
+    records = [
+        {
+            "job_id": "ADZ-SNAPSHOT-001",
+            "job_title": "Machine Learning Engineer",
+            "company": "Example Employer",
+            "required_skills": ["Python", "Docker"],
+            "source_type": "live_listing_unverified",
+            "evidence_origin": "adzuna",
+            "retrieval_channel": "zetaris",
+            "evidence_freshness": "stored_snapshot",
+            "source_url": "https://example.org/job/1",
+            "collected_at": "2026-10-25T23:00:00+00:00",
+            "skill_evidence_method": "description_keyword_mentions",
+        }
+    ]
+
+    evaluations = [
+        {
+            "job_id": "ADZ-SNAPSHOT-001",
+            "evaluation": {
+                "missing_skills": ["Docker"],
+            },
+        }
+    ]
+
+    report = investigate_career_evidence(
+        profile,
+        evaluations,
+        records,
+    )
+
+    gap = report["priority_skill_gaps"][0]
+
+    assert gap["skill"] == "Docker"
+    assert gap["live_listings_mentioning_gap"] == 0
+    assert gap["snapshot_listings_mentioning_gap"] == 1
+    assert gap["synthetic_examples_mentioning_gap"] == 0
+    assert gap["evidence_strength"] == "historical_listing_mentions"
+
+    assert "historical" in gap["why_it_matters"].lower()
+    assert "vacancies remain open" in gap["why_it_matters"]
+
+    reference = gap["evidence_references"][0]
+    assert reference["retrieval_channel"] == "zetaris"
+    assert reference["evidence_freshness"] == "stored_snapshot"
+    assert reference["collected_at"] == records[0]["collected_at"]

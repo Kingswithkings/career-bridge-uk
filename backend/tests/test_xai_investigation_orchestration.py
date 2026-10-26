@@ -191,3 +191,108 @@ def test_live_only_rejects_empty_provider_results(monkeypatch):
             CareerProfile(skills=["Python"], career_goal="AI Engineer"),
             require_live_evidence=True,
         )
+
+
+def test_explicit_zetaris_snapshot_mode(monkeypatch):
+    setup_offline(monkeypatch)
+
+    snapshot = {
+        **LIVE,
+        "retrieval_channel": "zetaris",
+        "evidence_freshness": "stored_snapshot",
+        "collected_at": "2026-10-25T23:00:00+00:00",
+    }
+
+    calls = []
+
+    def retrieve_snapshots(limit):
+        calls.append(limit)
+        return [snapshot.copy()]
+
+    def reject_fresh(*args, **kwargs):
+        raise AssertionError("Fresh Adzuna retrieval must not run")
+
+    monkeypatch.setattr(
+        orchestrator,
+        "retrieve_zetaris_adzuna_evidence",
+        retrieve_snapshots,
+    )
+    monkeypatch.setattr(
+        orchestrator,
+        "retrieve_live_job_evidence",
+        reject_fresh,
+    )
+
+    result = orchestrator.run_careerbridge_xai(
+        CareerProfile(skills=["Python"], career_goal="AI Engineer"),
+        evidence_mode="zetaris_snapshot",
+        limit=3,
+    )
+
+    assert calls == [3]
+    assert result["jobs_evaluated"] == 1
+    assert result["agent_trace"][0]["step"] == "retrieve_zetaris_snapshot"
+
+    critique = result["investigation"]["source_critique"]
+    assert critique["snapshot_count"] == 1
+    assert critique["fresh_listing_count"] == 0
+    assert critique["sufficient_for_cross_source_inference"] is False
+    assert any("historical evidence" in item for item in critique["limitations"])
+
+    gap = result["investigation"]["priority_skill_gaps"][0]
+    reference = gap["evidence_references"][0]
+
+    assert reference["retrieval_channel"] == "zetaris"
+    assert reference["evidence_freshness"] == "stored_snapshot"
+    assert reference["collected_at"] == snapshot["collected_at"]
+
+
+def test_live_only_never_reads_zetaris_snapshots(monkeypatch):
+    setup_offline(monkeypatch)
+
+    def reject_snapshots(*args, **kwargs):
+        raise AssertionError("Zetaris snapshots must not enter live-only mode")
+
+    monkeypatch.setattr(
+        orchestrator,
+        "retrieve_zetaris_adzuna_evidence",
+        reject_snapshots,
+    )
+    monkeypatch.setattr(
+        orchestrator,
+        "retrieve_live_job_evidence",
+        lambda *args, **kwargs: [LIVE.copy()],
+    )
+
+    result = orchestrator.run_careerbridge_xai(
+        CareerProfile(skills=["Python"], career_goal="AI Engineer"),
+        require_live_evidence=True,
+    )
+
+    assert result["jobs_evaluated"] == 1
+    assert result["investigation"]["source_critique"]["snapshot_count"] == 0
+
+
+def test_snapshot_mode_rejects_live_retrieval(monkeypatch):
+    import pytest
+
+    setup_offline(monkeypatch)
+
+    candidate = CareerProfile(
+        skills=["Python"],
+        career_goal="AI Engineer",
+    )
+
+    with pytest.raises(ValueError, match="cannot be combined"):
+        orchestrator.run_careerbridge_xai(
+            candidate,
+            evidence_mode="zetaris_snapshot",
+            require_live_evidence=True,
+        )
+
+    with pytest.raises(ValueError, match="cannot be combined"):
+        orchestrator.run_careerbridge_xai(
+            candidate,
+            evidence_mode="zetaris_snapshot",
+            include_live_jobs=True,
+        )

@@ -7,6 +7,7 @@ from backend.app.xai.agents.career_planning import analyse_career_profile
 from backend.app.xai.agents.evidence_agent import (
     retrieve_job_evidence,
     retrieve_demo_job_evidence,
+    retrieve_zetaris_adzuna_evidence,
 )
 from backend.app.xai.agents.evaluation_agent import evaluate_job_match
 from backend.app.xai.agents.explanation_agent import explain_job_match
@@ -34,6 +35,7 @@ def run_careerbridge_xai(
     question: str | None = None,
     include_nvidia_insight: bool = False,
     require_live_evidence: bool = False,
+    evidence_mode: str = "default",
 ) -> dict:
     """Investigate job evidence, optionally enrich it, critique and explain it.
 
@@ -49,24 +51,37 @@ def run_careerbridge_xai(
         "yes",
     }
 
+    if evidence_mode not in {"default", "zetaris_snapshot"}:
+        raise ValueError("Unsupported XAI evidence mode")
+
+    if evidence_mode == "zetaris_snapshot" and (
+        require_live_evidence or include_live_jobs
+    ):
+        raise ValueError(
+            "Zetaris snapshot mode cannot be combined with live job retrieval"
+        )
+
     if require_live_evidence:
         include_live_jobs = True
 
-    records = (
-        []
-        if require_live_evidence
-        else (
-            retrieve_demo_job_evidence(limit=limit)
-            if demo_mode
-            else retrieve_job_evidence(limit=limit)
-        )
-    )
+    if evidence_mode == "zetaris_snapshot":
+        records = retrieve_zetaris_adzuna_evidence(limit=limit)
+    elif require_live_evidence:
+        records = []
+    elif demo_mode:
+        records = retrieve_demo_job_evidence(limit=limit)
+    else:
+        records = retrieve_job_evidence(limit=limit)
     trace = [
         {
             "step": (
-                "live_evidence_only"
-                if require_live_evidence
-                else ("retrieve_demo_evidence" if demo_mode else "retrieve_zetaris")
+                "retrieve_zetaris_snapshot"
+                if evidence_mode == "zetaris_snapshot"
+                else (
+                    "live_evidence_only"
+                    if require_live_evidence
+                    else ("retrieve_demo_evidence" if demo_mode else "retrieve_zetaris")
+                )
             ),
             "status": "completed",
             "records": len(records),

@@ -145,29 +145,46 @@ def investigate_career_evidence(
             }
             for job_id in cited_jobs
         ]
-        live_count = sum(
-            by_id[job_id].get("source_type") != "sample" for job_id in cited_jobs
+        snapshot_count = sum(
+            by_id[job_id].get("source_type") != "sample"
+            and by_id[job_id].get("evidence_freshness") == "stored_snapshot"
+            for job_id in cited_jobs
         )
-        sample_count = len(cited_jobs) - live_count
+        fresh_count = sum(
+            by_id[job_id].get("source_type") != "sample"
+            and by_id[job_id].get("evidence_freshness") != "stored_snapshot"
+            for job_id in cited_jobs
+        )
+        sample_count = sum(
+            by_id[job_id].get("source_type") == "sample" for job_id in cited_jobs
+        )
 
         priorities.append(
             {
                 "skill": labels.get(key, key),
                 "jobs_mentioning_gap": len(cited_jobs),
-                "live_listings_mentioning_gap": live_count,
+                "live_listings_mentioning_gap": fresh_count,
+                "snapshot_listings_mentioning_gap": snapshot_count,
                 "synthetic_examples_mentioning_gap": sample_count,
                 "evidence_strength": (
-                    "unverified_listing_mentions" if live_count else "synthetic_only"
+                    "unverified_listing_mentions"
+                    if fresh_count
+                    else (
+                        "historical_listing_mentions"
+                        if snapshot_count
+                        else "synthetic_only"
+                    )
                 ),
                 "source_providers": sorted(matches["origins"]),
                 "evidence_references": refs,
                 "why_it_matters": (
                     f"The submitted candidate profile does not document {labels.get(key, key)}. "
-                    f"It appears in {live_count} non-sample job record(s) and "
-                    f"{sample_count} synthetic demonstration record(s). "
-                    "Non-sample records are not automatically verified vacancies, "
-                    "and skill mentions do not prove mandatory requirements."
-                    if live_count
+                    f"The skill appears in {fresh_count} non-snapshot listing(s), "
+                    f"{snapshot_count} historical stored listing(s), and "
+                    f"{sample_count} synthetic example(s). "
+                    "Historical snapshots do not establish that vacancies remain open. "
+                    "Keyword mentions do not establish mandatory employer requirements."
+                    if fresh_count or snapshot_count
                     else f"The submitted candidate profile does not document {labels.get(key, key)}, "
                     f"but this finding is based only on {sample_count} synthetic "
                     "demonstration record(s). It cannot establish real labor-market demand."
