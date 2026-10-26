@@ -1,3 +1,4 @@
+
 from contextlib import asynccontextmanager
 from importlib import import_module
 
@@ -5,9 +6,11 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+
 from sqlalchemy import inspect, text
 
 from .api.routes.auth_routes import router as auth_router
@@ -17,13 +20,20 @@ from .api.routes.interview_routes import router as interview_router
 from .api.routes.job_routes import router as job_router
 from .api.routes.result_routes import router as result_router
 from .api.routes.xai_routes import router as xai_router
+
 from .database import Base, engine
 from .limiter import limiter
 from .posthog_client import posthog_client
 
+
+# --------------------------------------------------
+# DATABASE MODELS AND INITIALIZATION
+# --------------------------------------------------
+
 import_module(f"{__package__}.models.result_model")
 import_module(f"{__package__}.models.user_model")
 import_module(f"{__package__}.models.feedback_model")
+
 Base.metadata.create_all(bind=engine)
 
 
@@ -33,51 +43,73 @@ def ensure_user_verification_columns() -> None:
     if "users" not in inspector.get_table_names():
         return
 
-    existing_columns = {column["name"] for column in inspector.get_columns("users")}
-    dialect = engine.dialect.name
+    existing_columns = {
+        column["name"]
+        for column in inspector.get_columns("users")
+    }
 
+    dialect = engine.dialect.name
     statements = []
+
     if "is_email_verified" not in existing_columns:
         if dialect == "postgresql":
             statements.append(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_email_verified BOOLEAN NOT NULL DEFAULT FALSE"
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "is_email_verified BOOLEAN NOT NULL DEFAULT FALSE"
             )
         else:
             statements.append(
-                "ALTER TABLE users ADD COLUMN is_email_verified BOOLEAN NOT NULL DEFAULT 0"
+                "ALTER TABLE users ADD COLUMN "
+                "is_email_verified BOOLEAN NOT NULL DEFAULT 0"
             )
 
     if "email_verification_code_hash" not in existing_columns:
         if dialect == "postgresql":
             statements.append(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_code_hash VARCHAR"
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "email_verification_code_hash VARCHAR"
             )
         else:
-            statements.append("ALTER TABLE users ADD COLUMN email_verification_code_hash VARCHAR")
+            statements.append(
+                "ALTER TABLE users ADD COLUMN "
+                "email_verification_code_hash VARCHAR"
+            )
 
     if "email_verification_expires_at" not in existing_columns:
         if dialect == "postgresql":
             statements.append(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires_at TIMESTAMP"
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "email_verification_expires_at TIMESTAMP"
             )
         else:
-            statements.append("ALTER TABLE users ADD COLUMN email_verification_expires_at DATETIME")
+            statements.append(
+                "ALTER TABLE users ADD COLUMN "
+                "email_verification_expires_at TIMESTAMP"
+            )
 
     if "password_reset_code_hash" not in existing_columns:
         if dialect == "postgresql":
             statements.append(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_code_hash VARCHAR"
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "password_reset_code_hash VARCHAR"
             )
         else:
-            statements.append("ALTER TABLE users ADD COLUMN password_reset_code_hash VARCHAR")
+            statements.append(
+                "ALTER TABLE users ADD COLUMN "
+                "password_reset_code_hash VARCHAR"
+            )
 
     if "password_reset_expires_at" not in existing_columns:
         if dialect == "postgresql":
             statements.append(
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMP"
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                "password_reset_expires_at TIMESTAMP"
             )
         else:
-            statements.append("ALTER TABLE users ADD COLUMN password_reset_expires_at DATETIME")
+            statements.append(
+                "ALTER TABLE users ADD COLUMN "
+                "password_reset_expires_at DATETIME"
+            )
 
     if not statements:
         return
@@ -90,11 +122,19 @@ def ensure_user_verification_columns() -> None:
 ensure_user_verification_columns()
 
 
+# --------------------------------------------------
+# APPLICATION LIFESPAN
+# --------------------------------------------------
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     yield
     posthog_client.flush()
 
+
+# --------------------------------------------------
+# FASTAPI APPLICATION
+# --------------------------------------------------
 
 app = FastAPI(
     title="CareerBridge UK API",
@@ -103,20 +143,41 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+# --------------------------------------------------
+# RATE LIMITING
+# --------------------------------------------------
+
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_exception_handler(
+    RateLimitExceeded,
+    _rate_limit_exceeded_handler,
+)
+
 app.add_middleware(SlowAPIMiddleware)
+
+
+# --------------------------------------------------
+# CORS CONFIGURATION
+# --------------------------------------------------
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://career-bridge-uk.1st-kings.com",
         "https://career-bridge-uk.vercel.app",
+        "https://careerbridge-xai-staging.vercel.app",
         "http://localhost:3000",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# --------------------------------------------------
+# API ROUTERS
+# --------------------------------------------------
 
 app.include_router(auth_router)
 app.include_router(cv_router)
@@ -127,16 +188,30 @@ app.include_router(feedback_router)
 app.include_router(xai_router)
 
 
+# --------------------------------------------------
+# VALIDATION ERROR HANDLING
+# --------------------------------------------------
+
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(_request: Request, exc: RequestValidationError):
+async def validation_exception_handler(
+    _request: Request,
+    exc: RequestValidationError,
+):
     return JSONResponse(
         status_code=422,
         content={
             "detail": exc.errors(),
-            "message": "Invalid request body. Check the required fields and JSON format.",
+            "message": (
+                "Invalid request body. "
+                "Check the required fields and JSON format."
+            ),
         },
     )
 
+
+# --------------------------------------------------
+# ROOT ENDPOINT
+# --------------------------------------------------
 
 @app.get("/")
 def root():
@@ -145,6 +220,10 @@ def root():
         "docs": "/docs",
     }
 
+
+# --------------------------------------------------
+# HEALTH ENDPOINT
+# --------------------------------------------------
 
 @app.get("/health")
 def health_check():
