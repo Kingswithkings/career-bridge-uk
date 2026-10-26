@@ -24,15 +24,12 @@ def parse_postgres_array(value):
     )
 
 
-
 def normalize_collected_at(value):
     """Normalize timestamps from the verified UTC PostgreSQL source."""
     if isinstance(value, datetime):
         parsed = value
     elif isinstance(value, str):
-        parsed = datetime.fromisoformat(
-            value.strip().replace("Z", "+00:00")
-        )
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
     else:
         raise ValueError("Unsupported collected_at timestamp")
 
@@ -40,6 +37,7 @@ def normalize_collected_at(value):
         parsed = parsed.replace(tzinfo=timezone.utc)
 
     return parsed.astimezone(timezone.utc).isoformat()
+
 
 def retrieve_job_evidence(limit=10):
     """Retrieve sample job evidence through Zetaris JDBC."""
@@ -65,12 +63,8 @@ def retrieve_job_evidence(limit=10):
     evidence = []
     for row in rows:
         record = dict(zip(columns, row))
-        record["required_skills"] = parse_postgres_array(
-            record["required_skills"]
-        )
-        record["collected_at"] = normalize_collected_at(
-            record["collected_at"]
-        )
+        record["required_skills"] = parse_postgres_array(record["required_skills"])
+        record["collected_at"] = normalize_collected_at(record["collected_at"])
         record["evidence_origin"] = "zetaris"
         record["verified_live_vacancy"] = False
         evidence.append(record)
@@ -98,6 +92,59 @@ def retrieve_demo_job_evidence(limit=10):
         record["verified_live_vacancy"] = False
         record["skill_evidence_method"] = "synthetic_demo_data"
         record["required_skills"] = list(record.get("required_skills") or [])
+        evidence.append(record)
+
+    return evidence
+
+
+def retrieve_zetaris_adzuna_evidence(limit: int = 10) -> list[dict]:
+    """Read timestamped Adzuna snapshots from Zetaris, not fresh vacancies."""
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100:
+        raise ValueError("limit must be an integer between 1 and 100")
+
+    query = (
+        "SELECT job_id, job_title, company, skills_mentioned, "
+        "source_url, source_type, evidence_origin, "
+        "skill_evidence_method, collected_at "
+        "FROM CAREERBRIDGE_ADZUNA.careerbridge_adzuna_evidence "
+        f"LIMIT {limit}"
+    )
+
+    with zetaris_connection() as connection:
+        cursor = connection.cursor()
+        try:
+            cursor.execute(query)
+            columns = [column[0].lower() for column in cursor.description]
+            rows = cursor.fetchall()
+        finally:
+            cursor.close()
+
+    evidence = []
+    for row in rows:
+        record = dict(zip(columns, row))
+
+        if (
+            record.get("source_type") != "live_listing_unverified"
+            or record.get("evidence_origin") != "adzuna"
+        ):
+            raise ValueError("Unexpected Zetaris Adzuna provenance")
+
+        source_url = str(record.get("source_url") or "").strip()
+        if not source_url.startswith(("https://", "http://")):
+            raise ValueError("Zetaris Adzuna record lacks a valid source URL")
+
+        record["required_skills"] = [
+            skill.strip()
+            for skill in str(record.get("skills_mentioned") or "").split("|")
+            if skill.strip()
+        ]
+        record.pop("skills_mentioned", None)
+
+        record["collected_at"] = normalize_collected_at(record["collected_at"])
+        record["retrieval_channel"] = "zetaris"
+        record["evidence_freshness"] = "stored_snapshot"
+        record["verified_live_vacancy"] = False
+
         evidence.append(record)
 
     return evidence

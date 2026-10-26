@@ -9,6 +9,8 @@ type JobRecord = {
   collected_at: string;
   source_type: string;
   evidence_origin?: string;
+  retrieval_channel?: string;
+  evidence_freshness?: string;
   source_url?: string | null;
 };
 
@@ -57,7 +59,12 @@ async function main() {
       at,
       source: {
         kind: "pipeline" as const,
-        by: `careerbridge-${origin}-evidence-agent`,
+        by:
+          origin === "adzuna" &&
+          job.retrieval_channel === "zetaris" &&
+          job.evidence_freshness === "stored_snapshot"
+            ? "careerbridge-adzuna-zetaris-snapshot-evidence-agent"
+            : `careerbridge-${origin}-evidence-agent`,
         at,
         ...(job.source_url ? { url: job.source_url } : {}),
       },

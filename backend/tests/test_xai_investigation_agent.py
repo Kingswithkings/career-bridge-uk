@@ -61,7 +61,10 @@ def test_investigation_cites_each_skill_gap_and_never_infers_rejection_reason():
     assert finding["priority_skill_gaps"][0]["jobs_mentioning_gap"] == 2
     refs = finding["priority_skill_gaps"][0]["evidence_references"]
     assert {ref["job_id"] for ref in refs} == {"DEMO-001", "ADZ-001"}
-    assert next(ref for ref in refs if ref["job_id"] == "ADZ-001")["evidence_method"] == "description_keyword_mentions"
+    assert (
+        next(ref for ref in refs if ref["job_id"] == "ADZ-001")["evidence_method"]
+        == "description_keyword_mentions"
+    )
     assert "preliminary gaps" in finding["conclusion"]
     assert any("not proof" in warning for warning in finding["boundaries"])
 
@@ -107,9 +110,7 @@ def test_live_evidence_ranks_ahead_of_synthetic_only_evidence():
     results = [
         {
             "job_id": record["job_id"],
-            "evaluation": {
-                "missing_skills": record["required_skills"]
-            },
+            "evaluation": {"missing_skills": record["required_skills"]},
         }
         for record in records
     ]
@@ -137,22 +138,24 @@ def test_investigation_explains_synthetic_evidence_limitations():
         career_goal="AI Engineer",
     )
 
-    records = [{
-        "job_id": "DEMO-001",
-        "source_type": "sample",
-        "evidence_origin": "demo",
-        "required_skills": ["Docker"],
-        "source_url": None,
-    }]
+    records = [
+        {
+            "job_id": "DEMO-001",
+            "source_type": "sample",
+            "evidence_origin": "demo",
+            "required_skills": ["Docker"],
+            "source_url": None,
+        }
+    ]
 
-    results = [{
-        "job_id": "DEMO-001",
-        "evaluation": {"missing_skills": ["Docker"]},
-    }]
+    results = [
+        {
+            "job_id": "DEMO-001",
+            "evaluation": {"missing_skills": ["Docker"]},
+        }
+    ]
 
-    report = investigate_career_evidence(
-        profile, results, records
-    )
+    report = investigate_career_evidence(profile, results, records)
 
     gap = report["priority_skill_gaps"][0]
 
@@ -187,20 +190,15 @@ def test_hypothesis_investigation_distinguishes_claims():
         }
     ]
 
-    report = investigate_career_evidence(
-        profile, results, records
-    )
+    report = investigate_career_evidence(profile, results, records)
 
-    investigation = report["priority_skill_gaps"][0][
-        "hypothesis_investigation"
-    ]
+    investigation = report["priority_skill_gaps"][0]["hypothesis_investigation"]
 
     assert investigation["live_listing_references"] == 1
     assert investigation["synthetic_references"] == 0
 
     assessments = [
-        hypothesis["assessment"]
-        for hypothesis in investigation["hypotheses"]
+        hypothesis["assessment"] for hypothesis in investigation["hypotheses"]
     ]
 
     assert assessments == [
@@ -234,32 +232,65 @@ def test_skill_gap_cites_original_source_excerpt():
         career_goal="AI Engineer",
     )
 
-    records = [{
-        "job_id": "ADZ-001",
-        "source_type": "live_listing_unverified",
-        "evidence_origin": "adzuna",
-        "source_url": "https://example.org/job/1",
-        "required_skills": ["Docker"],
-        "skill_contexts": {
-            "Docker": "Experience with Docker is helpful."
-        },
-        "skill_evidence_method": "description_keyword_mentions",
-    }]
+    records = [
+        {
+            "job_id": "ADZ-001",
+            "source_type": "live_listing_unverified",
+            "evidence_origin": "adzuna",
+            "source_url": "https://example.org/job/1",
+            "required_skills": ["Docker"],
+            "skill_contexts": {"Docker": "Experience with Docker is helpful."},
+            "skill_evidence_method": "description_keyword_mentions",
+        }
+    ]
 
-    results = [{
-        "job_id": "ADZ-001",
-        "evaluation": {"missing_skills": ["Docker"]},
-    }]
+    results = [
+        {
+            "job_id": "ADZ-001",
+            "evaluation": {"missing_skills": ["Docker"]},
+        }
+    ]
 
-    report = investigate_career_evidence(
-        profile, results, records
-    )
+    report = investigate_career_evidence(profile, results, records)
 
     gap = report["priority_skill_gaps"][0]
     reference = gap["evidence_references"][0]
 
-    assert reference["source_excerpt"] == (
-        "Experience with Docker is helpful."
-    )
+    assert reference["source_excerpt"] == ("Experience with Docker is helpful.")
     assert reference["source_type"] == "live_listing_unverified"
     assert gap["evidence_strength"] == "unverified_listing_mentions"
+
+
+def test_source_critic_identifies_zetaris_snapshots():
+    records = [
+        {
+            "job_id": "ADZ-SNAPSHOT-001",
+            "source_type": "live_listing_unverified",
+            "evidence_origin": "adzuna",
+            "retrieval_channel": "zetaris",
+            "evidence_freshness": "stored_snapshot",
+            "source_url": "https://example.org/job/1",
+            "required_skills": ["Python"],
+            "collected_at": "2026-10-25T23:00:00+00:00",
+        },
+        {
+            "job_id": "ADZ-FRESH-002",
+            "source_type": "live_listing_unverified",
+            "evidence_origin": "adzuna",
+            "source_url": "https://example.org/job/2",
+            "required_skills": ["Docker"],
+        },
+    ]
+
+    review = critique_sources(records)
+
+    assert review["snapshot_count"] == 1
+    assert review["fresh_listing_count"] == 1
+    assert review["sample_count"] == 0
+
+    assert review["sufficient_for_cross_source_inference"] is False
+
+    assert any(
+        "historical evidence" in limitation and "currently open" in limitation
+        for limitation in review["limitations"]
+    )
